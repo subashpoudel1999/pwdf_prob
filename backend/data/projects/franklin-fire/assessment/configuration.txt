@@ -1,0 +1,45 @@
+# Assessment configuration for wildcat v1.1.0
+
+# Preprocessed rasters
+perimeter_p = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\preprocessed\perimeter.tif"
+dem_p = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\preprocessed\dem.tif"
+dnbr_p = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\preprocessed\dnbr.tif"
+severity_p = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\preprocessed\severity.tif"
+kf_p = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\preprocessed\kf.tif"
+retainments_p = None
+excluded_p = None
+included_p = None
+iswater_p = None
+isdeveloped_p = None
+
+# Unit conversions
+dem_per_m = 1
+
+# Network delineation
+min_area_km2 = 0.025
+min_burned_area_km2 = 0.01
+max_length_m = 500
+
+# Filtering
+max_area_km2 = 8
+max_exterior_ratio = 0.95
+min_burn_ratio = 0.25
+min_slope = 0.12
+max_developed_area_km2 = 0.025
+max_confinement = 174
+confinement_neighborhood = 4
+flow_continuous = True
+
+# Removed segments
+remove_ids = []
+
+# Hazard Modeling
+I15_mm_hr = [16, 20, 24, 40]
+volume_CI = [0.95]
+durations = [15, 30, 60]
+probabilities = [0.5, 0.75]
+
+# Basins
+locate_basins = True
+parallelize_basins = False
+

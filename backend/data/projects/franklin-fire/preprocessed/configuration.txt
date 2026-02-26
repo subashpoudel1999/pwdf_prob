@@ -1,0 +1,46 @@
+# Preprocessor configuration for wildcat v1.1.0
+
+# Input datasets
+perimeter = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\inputs\fra2024-perimeter.shp"
+dem = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\inputs\franklin_fire_dem_10m.tif"
+dnbr = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\inputs\franklin_dnbr_2024_s2.tif"
+severity = r"C:\Users\J01040445\OneDrive - Jackson State University\Academia\ERDC\Franklin Fire 2024\wildcat\franklin-fire\inputs\franklin_severity_2024_s2.tif"
+kf = 0.2
+evt = None
+retainments = None
+excluded = None
+included = None
+iswater = None
+isdeveloped = None
+
+# Perimeter
+buffer_km = 3
+
+# DEM
+resolution_limits_m = [6.5, 11]
+resolution_check = "error"
+
+# dNBR
+dnbr_scaling_check = "error"
+constrain_dnbr = True
+dnbr_limits = [-2000, 2000]
+
+# Burn Severity
+severity_field = None
+estimate_severity = True
+severity_thresholds = [125, 250, 500]
+contain_severity = True
+
+# KF-factors
+kf_field = None
+constrain_kf = True
+max_missing_kf_ratio = 0.05
+missing_kf_check = "warn"
+kf_fill = False
+kf_fill_field = None
+
+# EVT masks
+water = [7292]
+developed = [7296, 7297, 7298, 7299, 7300]
+excluded_evt = []
+

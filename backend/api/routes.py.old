@@ -1,0 +1,102 @@
+from fastapi import APIRouter, HTTPException
+from pathlib import Path
+from pydantic import BaseModel
+from typing import Dict, Any, List
+from services.wildcat_service import WildcatService
+from services.gis_service import GISService
+
+router = APIRouter()
+
+# Initialize services
+PROJECTS_DIR = Path(__file__).parent.parent / "data" / "projects"
+TEMP_DIR = Path(__file__).parent.parent / "data" / "temp"
+wildcat_service = WildcatService(PROJECTS_DIR)
+gis_service = GISService(
+    source_project_dir=PROJECTS_DIR / "franklin-fire",
+    temp_dir=TEMP_DIR
+)
+
+# Request models
+class CustomAnalysisRequest(BaseModel):
+    polygon: Dict[str, Any]  # GeoJSON geometry
+
+@router.get("/fires/{fire_id}/results")
+def get_fire_results(fire_id: str):
+    """Get Wildcat analysis results as GeoJSON"""
+    try:
+        return wildcat_service.get_results(fire_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/fires/{fire_id}/analyze")
+def analyze_fire(fire_id: str, force_rerun: bool = False):
+    """Run Wildcat analysis for a fire"""
+    try:
+        result = wildcat_service.run_analysis(fire_id, force_rerun)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/fires/{fire_id}/status")
+def get_fire_status(fire_id: str):
+    """Check if fire has analysis results"""
+    try:
+        has_results = wildcat_service.has_results(fire_id)
+        return {
+            "fire_id": fire_id,
+            "status": "completed" if has_results else "not_analyzed",
+            "has_results": has_results
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/custom-analysis")
+def analyze_custom_area(request: CustomAnalysisRequest):
+    """
+    Run Wildcat analysis on a user-defined custom area within Franklin Fire.
+
+    Clips all input datasets (DEM, dNBR, severity, perimeter) to the polygon,
+    creates a temporary Wildcat project, runs the analysis, and returns results.
+    """
+    try:
+        # Step 1: Create clipped project
+        project_path, clip_status = gis_service.create_custom_analysis_project(
+            polygon_geojson=request.polygon
+        )
+
+        if clip_status["status"] != "completed":
+            raise HTTPException(
+                status_code=500,
+                detail=f"Clipping failed: {clip_status.get('error', 'Unknown error')}"
+            )
+
+        # Step 2: Run Wildcat analysis on clipped data
+        project_name = project_path.name
+        temp_wildcat_service = WildcatService(TEMP_DIR)
+        analysis_result = temp_wildcat_service.run_analysis(project_name, force_rerun=True)
+
+        if analysis_result["status"] == "error":
+            raise HTTPException(
+                status_code=500,
+                detail=f"Wildcat analysis failed: {analysis_result['message']}"
+            )
+
+        # Step 3: Get results
+        results = temp_wildcat_service.get_results(project_name)
+
+        # Step 4: Clean up temporary project (optional - comment out to keep for debugging)
+        # gis_service.cleanup_project(project_path)
+
+        return {
+            "status": "success",
+            "message": "Custom analysis completed",
+            "project_name": project_name,
+            "results": results
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Custom analysis error: {str(e)}")

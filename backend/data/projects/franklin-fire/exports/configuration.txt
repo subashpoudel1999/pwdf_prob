@@ -1,0 +1,16 @@
+# Export configuration for wildcat v1.1.0
+
+# Output files
+format = "Shapefile"
+export_crs = "WGS 84"
+prefix = ""
+suffix = ""
+
+# Properties
+properties = ['default']
+order_properties = True
+
+# Property names
+clean_names = True
+rename = {}
+
