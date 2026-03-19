@@ -13,6 +13,9 @@ from typing import Dict, Any
 from services.wildcat_service import WildcatService
 from services.gis_service import GISService
 from services.palisades_service import PalisadesService
+from services.dolan_service import DolanService
+import services.gee_service as gee_service
+from services.dolan_gee_service import DolanGeeService
 
 router = APIRouter()
 
@@ -25,6 +28,21 @@ gis_service = GISService(FRANKLIN_FIRE_BASINS)
 
 # --- Palisades Fire service ---
 palisades_service = PalisadesService()
+
+# --- Dolan Fire service ---
+dolan_service = DolanService()
+
+
+# --- GEE Dolan service (created per-request with caller's project ID) ---
+# DolanGeeService instances are lightweight; the heavy work is in threads.
+_gee_dolan_instances: Dict[str, Any] = {}  # project_id → DolanGeeService
+
+
+def _gee_dolan(project_id: str) -> DolanGeeService:
+    """Return (or create) a DolanGeeService for the given project ID."""
+    if project_id not in _gee_dolan_instances:
+        _gee_dolan_instances[project_id] = DolanGeeService(project_id)
+    return _gee_dolan_instances[project_id]
 
 
 # Request models
@@ -221,3 +239,245 @@ def clear_palisades_cache():
     """Clear cached Palisades results to force a fresh analysis."""
     palisades_service.clear_cache()
     return {"status": "ok", "message": "Cache cleared. Next analysis will run fresh."}
+
+
+# ===========================================================================
+# Dolan Fire endpoints — LIVE analysis via WhiteboxTools (2020 fire)
+# ===========================================================================
+
+@router.get("/dolan/available-inputs")
+def get_dolan_available_inputs():
+    """Return metadata and legend info for all available Dolan burn severity datasets."""
+    try:
+        return dolan_service.get_available_inputs()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/dolan/preview/{dataset}")
+def get_dolan_preview(dataset: str):
+    """Return a georeferenced PNG overlay (base64) for a burn severity dataset."""
+    try:
+        return dolan_service.get_preview_image(dataset)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Preview error: {str(e)}")
+
+
+@router.post("/dolan/analyze")
+def start_dolan_analysis(force: bool = False, burn_metric: str = "dnbr"):
+    """
+    Start live watershed delineation + debris-flow hazard assessment
+    for the 2020 Dolan Fire (Big Sur, CA) using WhiteboxTools.
+
+    burn_metric: one of "dnbr", "rdnbr", "dnbr6"
+    Returns job_id for polling status.
+    """
+    try:
+        return dolan_service.start_analysis(force=force, burn_metric=burn_metric)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start analysis: {str(e)}")
+
+
+@router.get("/dolan/status/{job_id}")
+def get_dolan_status(job_id: str):
+    """Poll Dolan analysis progress."""
+    status = dolan_service.get_status(job_id)
+    if status.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+    return status
+
+
+@router.get("/dolan/results")
+def get_dolan_results():
+    """Get completed Dolan analysis results as GeoJSON FeatureCollection."""
+    try:
+        return dolan_service.get_results()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
+@router.get("/dolan/perimeter")
+def get_dolan_perimeter():
+    """Get the Dolan Fire perimeter as GeoJSON (WGS84)."""
+    try:
+        return dolan_service.get_perimeter()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
+@router.post("/dolan/analyze-zone")
+def start_dolan_zone_analysis(request: CustomAnalysisRequest, burn_metric: str = ""):
+    """
+    Re-run the full WhiteboxTools + debris-flow pipeline clipped to a user-drawn polygon.
+    burn_metric: "dnbr" | "rdnbr" | "dnbr6" (defaults to metric used in last full analysis).
+    Results fetched via /dolan/zone-results/{job_id}.
+    """
+    try:
+        if not request.polygon or request.polygon.get("type") != "Polygon":
+            raise HTTPException(
+                status_code=400, detail="Invalid polygon. Must be GeoJSON Polygon geometry."
+            )
+        return dolan_service.start_zone_analysis(request.polygon, burn_metric=burn_metric)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Zone analysis error: {str(e)}")
+
+
+@router.get("/dolan/zone-results/{job_id}")
+def get_dolan_zone_results(job_id: str):
+    """Fetch results for a completed Dolan zone analysis job."""
+    try:
+        return dolan_service.get_zone_results(job_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
+
+
+@router.delete("/dolan/cache")
+def clear_dolan_cache():
+    """Clear cached Dolan results to force a fresh analysis."""
+    dolan_service.clear_cache()
+    return {"status": "ok", "message": "Cache cleared. Next analysis will run fresh."}
+
+
+# ===========================================================================
+# GEE — Dolan Fire via Google Earth Engine DEM
+# All existing /dolan/* routes are UNCHANGED. These are new, parallel routes.
+# ===========================================================================
+
+class GeeTestRequest(BaseModel):
+    project_id: str
+
+
+class GeeAnalyzeRequest(BaseModel):
+    project_id: str
+
+
+class GeeZoneRequest(BaseModel):
+    project_id: str
+    polygon: Dict[str, Any]
+
+
+class GeeValidateAreaRequest(BaseModel):
+    polygon: Dict[str, Any]   # GeoJSON Polygon geometry
+    buffer_m: int = 200       # buffer to add around the polygon
+
+
+@router.post("/gee/validate-area")
+def gee_validate_area(request: GeeValidateAreaRequest):
+    """
+    Check whether a user-drawn polygon + buffer fits within GEE's direct download limit.
+    Returns {"ok": bool, "area_km2": float, "limit_km2": float, "message": str}.
+    Does NOT require GEE authentication — pure geometry calculation.
+    """
+    try:
+        from shapely.geometry import shape as shp_shape
+        import geopandas as gpd
+        geom = shp_shape(request.polygon)
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs="EPSG:4326")
+        return gee_service.check_area(gdf, request.buffer_m)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/gee/test-connection")
+def gee_test_connection(request: GeeTestRequest):
+    """
+    Test that the user's local GEE credentials are valid and the project ID works.
+    The user must have already run `earthengine authenticate` on this machine.
+    """
+    try:
+        result = gee_service.test_connection(request.project_id)
+        if not result["success"]:
+            raise HTTPException(status_code=400, detail=result["message"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/gee/dolan/analyze")
+def start_gee_dolan_analysis(request: GeeAnalyzeRequest, burn_metric: str = "dnbr", force: bool = False):
+    """
+    Start Dolan Fire analysis using GEE for DEM download.
+    The local 1.1 GB DEM file is NOT required — it is fetched from USGS 3DEP via GEE.
+    Burn severity rasters (dNBR/rdNBR/dNBR6) are still read from local files.
+    """
+    try:
+        svc = _gee_dolan(request.project_id)
+        return svc.start_analysis(force=force, burn_metric=burn_metric)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gee/dolan/status/{job_id}")
+def get_gee_dolan_status(job_id: str):
+    """Poll GEE Dolan analysis progress (same job store as /dolan/status)."""
+    try:
+        return dolan_service.get_status(job_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gee/dolan/results")
+def get_gee_dolan_results():
+    """Fetch GEE Dolan analysis results (same cache as /dolan/results)."""
+    try:
+        return dolan_service.get_results()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gee/dolan/perimeter")
+def get_gee_dolan_perimeter():
+    """Fetch Dolan fire perimeter GeoJSON."""
+    try:
+        return dolan_service.get_perimeter()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gee/dolan/available-inputs")
+def get_gee_dolan_available_inputs():
+    """Return available burn severity datasets for GEE Dolan analysis."""
+    try:
+        return dolan_service.get_available_inputs()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/gee/dolan/analyze-zone")
+def start_gee_dolan_zone(request: GeeZoneRequest, burn_metric: str = ""):
+    """
+    Start a zone analysis for Dolan Fire using GEE for DEM.
+    Full WhiteboxTools pipeline re-run clipped to the user-drawn polygon.
+    """
+    try:
+        if not request.polygon or request.polygon.get("type") != "Polygon":
+            raise HTTPException(status_code=400, detail="Invalid polygon geometry.")
+        svc = _gee_dolan(request.project_id)
+        return svc.start_zone_analysis(request.polygon, burn_metric=burn_metric)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gee/dolan/zone-results/{job_id}")
+def get_gee_dolan_zone_results(job_id: str):
+    """Fetch results for a completed GEE Dolan zone analysis job."""
+    try:
+        return dolan_service.get_zone_results(job_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

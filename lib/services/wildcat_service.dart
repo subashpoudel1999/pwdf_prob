@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
+
 class WildcatService {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = AppConfig.backendUrl;
 
   /// Check if a fire has Wildcat analysis results
   static Future<bool> hasResults(String fireId) async {

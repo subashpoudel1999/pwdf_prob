@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'screens/enhanced_map_screen.dart';
+import 'screens/home_screen.dart';
 
 void main() {
   runApp(const FireDashboardApp());
@@ -18,7 +18,7 @@ class FireDashboardApp extends StatelessWidget {
         brightness: Brightness.light,
         useMaterial3: true,
       ),
-      home: const MapScreen(),
+      home: const HomeScreen(),
     );
   }
 }

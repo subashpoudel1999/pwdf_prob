@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
 import '../utils/geojson_parser.dart';
 import '../widgets/attribute_panel.dart';
 
@@ -25,7 +26,7 @@ class _AreaPredictionScreenState extends State<AreaPredictionScreen> {
   ParsedGeoJson? _results;
   int? _selectedFeatureIndex;
 
-  static const String _backendUrl = 'http://localhost:8000/api/v1';
+  static const String _backendUrl = AppConfig.backendUrl;
 
   // Franklin Fire center
   static const LatLng _center = LatLng(34.1, -118.9);

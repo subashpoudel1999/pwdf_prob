@@ -57,3 +57,23 @@ __pycache__/
 
 # Backend temporary analysis output
 backend/data/temp/
+
+# Large local DEM — replaced by GEE download at runtime
+assets/data/dolan_dem_3dep10m.tif
+
+# Landsat reflectance rasters — not used by pipeline, too large (25 MB each)
+assets/data/dolan_inputs_all/*_L8_refl.tif
+
+# ArcGIS/GDAL auxiliary files — auto-generated, not needed
+**/*.aux
+**/*.rrd
+
+# Generated runtime cache — recreated automatically on first analysis run
+backend/data/dolan_cache/
+backend/data/palisades_cache/
+
+# Development notebooks — calibration/debug tools, not production code
+notebooks/
+
+# Generated figures
+figures/

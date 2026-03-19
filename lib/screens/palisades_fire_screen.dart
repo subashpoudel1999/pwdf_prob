@@ -5,6 +5,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
 import '../utils/geojson_parser.dart';
 import '../widgets/attribute_panel.dart';
 
@@ -45,7 +46,7 @@ enum _ScreenState { landing, analyzing, results }
 
 class _PalisadesFireScreenState extends State<PalisadesFireScreen>
     with TickerProviderStateMixin {
-  static const String _backendUrl = 'http://localhost:8000/api/v1';
+  static const String _backendUrl = AppConfig.backendUrl;
   static const LatLng _palisadesCenter = LatLng(34.099, -118.570);
 
   final MapController _mapController = MapController();

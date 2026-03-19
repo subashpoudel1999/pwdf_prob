@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'enhanced_map_screen.dart';
 import 'area_prediction_screen.dart';
 import 'custom_analysis_screen.dart';
-import 'franklin_fire_screen.dart';
 import 'palisades_fire_screen.dart';
+import 'dolan_fire_screen.dart';
+import 'gee_dolan_screen.dart';
 
 /// Home screen with two main options:
 /// 1. Analyze existing fire data (your current functionality)
@@ -55,8 +56,13 @@ class HomeScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // FEATURED: Franklin Fire Analysis
-                _buildFranklinFireCard(context),
+                // FEATURED: Dolan Fire Analysis
+                _buildDolanFireCard(context),
+
+                const SizedBox(height: 16),
+
+                // GEE-powered Dolan analysis (no local DEM needed)
+                _buildGeeCard(context),
 
                 const SizedBox(height: 24),
 
@@ -154,13 +160,13 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFranklinFireCard(BuildContext context) {
+  Widget _buildDolanFireCard(BuildContext context) {
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => const FranklinFireScreen(),
+            builder: (context) => const DolanFireScreen(),
           ),
         );
       },
@@ -172,14 +178,14 @@ class HomeScreen extends StatelessWidget {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFFFF6B35),  // Deep Orange
-              Color(0xFFFF8C42),  // Lighter Orange
+              Color(0xFF00897B),  // Teal dark
+              Color(0xFF00BFA5),  // Teal light
             ],
           ),
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.orange.withOpacity(0.5),
+              color: Color(0xFF00BFA5),
               blurRadius: 20,
               offset: const Offset(0, 10),
             ),
@@ -191,7 +197,7 @@ class HomeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -209,7 +215,7 @@ class HomeScreen extends StatelessWidget {
                   Row(
                     children: [
                       const Text(
-                        'Franklin Fire',
+                        'Dolan Fire',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -227,7 +233,7 @@ class HomeScreen extends StatelessWidget {
                         child: const Text(
                           'LIVE ANALYSIS',
                           style: TextStyle(
-                            color: Colors.deepOrange,
+                            color: Color(0xFF00897B),
                             fontSize: 11,
                             fontWeight: FontWeight.bold,
                             letterSpacing: 0.5,
@@ -238,19 +244,19 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Real-time Wildcat debris-flow hazard assessment',
+                    '2020  •  Big Sur, CA  •  WhiteboxTools + Staley (2017) M1',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: 15,
                       height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      _buildFeatureChip('Full Analysis', Icons.analytics),
+                      _buildFeatureChip('Sub-basins', Icons.grain),
                       const SizedBox(width: 8),
-                      _buildFeatureChip('Custom Areas', Icons.draw),
+                      _buildFeatureChip('Hazard Model', Icons.science),
                       const SizedBox(width: 8),
                       _buildFeatureChip('Live Results', Icons.bolt),
                     ],
@@ -262,7 +268,7 @@ class HomeScreen extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
+                color: Colors.white.withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -273,6 +279,72 @@ class HomeScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGeeCard(BuildContext context) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const GeeDolanScreen()),
+      ),
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0D2137),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF42A5F5).withValues(alpha: 0.35)),
+        ),
+        child: Row(children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: const Color(0xFF42A5F5).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.cloud_outlined,
+                color: Color(0xFF42A5F5), size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Text('Dolan Fire  ×  GEE',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold)),
+                  SizedBox(width: 10),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Color(0xFF42A5F5),
+                      borderRadius: BorderRadius.all(Radius.circular(6)),
+                    ),
+                    child: Text('GEE',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5)),
+                  ),
+                ]),
+                SizedBox(height: 3),
+                Text(
+                  'Same WhiteboxTools pipeline — DEM fetched from USGS 3DEP via Google Earth Engine. No local 1.1 GB file needed.',
+                  style: TextStyle(color: Colors.white54, fontSize: 11, height: 1.4),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.arrow_forward_ios,
+              color: Color(0xFF42A5F5), size: 16),
+        ]),
       ),
     );
   }

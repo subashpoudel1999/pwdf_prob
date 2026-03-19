@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+import '../config/app_config.dart';
 import '../services/wildcat_service.dart';
 import '../utils/geojson_parser.dart';
 import '../widgets/attribute_panel.dart';
@@ -204,7 +205,7 @@ class _FranklinFireScreenState extends State<FranklinFireScreen> with SingleTick
 
       // Call custom analysis endpoint
       final response = await http.post(
-        Uri.parse('http://localhost:8000/api/v1/custom-analysis'),
+        Uri.parse('${AppConfig.backendUrl}/custom-analysis'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'polygon': polygonGeometry}),
       );
