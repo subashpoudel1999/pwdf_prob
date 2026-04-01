@@ -50,7 +50,7 @@ class GeeDolanScreen extends StatefulWidget {
 
 class _GeeDolanScreenState extends State<GeeDolanScreen>
     with TickerProviderStateMixin {
-  static const String _backendUrl = AppConfig.backendUrl;
+  static final String _backendUrl = AppConfig.backendUrl;
 
   final MapController _mapController = MapController();
   final TextEditingController _projectIdController = TextEditingController();

@@ -1,0 +1,11 @@
+[
+  {
+    "date": "2021-01-28",
+    "peak_precip_mm": 88.0,
+    "event_precip_mm": 172.6,
+    "pre_start": "2020-10-30",
+    "pre_end": "2021-01-21",
+    "post_start": "2021-01-29",
+    "post_end": "2021-03-14"
+  }
+]

@@ -1,0 +1,113 @@
+[
+    {
+        "name": "wildcat",
+        "organization": "U.S. Geological Survey",
+        "description": "Tool to assess and map post-wildfire debris-flow hazards",
+        "version": "1.1.1",
+        "status": "Production",
+        "permissions": {
+            "usageType": "openSource",
+            "licenses": [
+                {
+                    "name": "GNU General Public License Version 3",
+                    "URL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/raw/1.1.1/LICENSE.md"
+                }
+            ]
+        },
+        "homepageURL": "https://code.usgs.gov/ghsc/lhp/wildcat",
+        "downloadURL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/archive/1.1.1/wildcat-1.1.1.zip",
+        "disclaimerURL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/raw/1.1.1/DISCLAIMER.md",
+        "repositoryURL": "https://code.usgs.gov/ghsc/lhp/wildcat.git",
+        "vcs": "git",
+        "laborHours": 452,
+        "tags": [
+            "debris-flow",
+            "post-wildfire",
+            "hazard assessment"
+        ],
+        "languages": [
+            "Python"
+        ],
+        "contact": {
+            "name": "Jonathan King",
+            "email": "jking@usgs.gov"
+        },
+        "date": {
+            "metadataLastUpdated": "2025-07-11"
+        }
+    },
+    {
+        "name": "wildcat",
+        "organization": "U.S. Geological Survey",
+        "description": "Tool to assess and map post-wildfire debris-flow hazards",
+        "version": "1.1.0",
+        "status": "Production",
+        "permissions": {
+            "usageType": "openSource",
+            "licenses": [
+                {
+                    "name": "GNU General Public License Version 3",
+                    "URL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/raw/1.1.0/LICENSE.md"
+                }
+            ]
+        },
+        "homepageURL": "https://code.usgs.gov/ghsc/lhp/wildcat",
+        "downloadURL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/archive/1.1.0/wildcat-1.1.0.zip",
+        "disclaimerURL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/raw/1.1.0/DISCLAIMER.md",
+        "repositoryURL": "https://code.usgs.gov/ghsc/lhp/wildcat.git",
+        "vcs": "git",
+        "laborHours": 450,
+        "tags": [
+            "debris-flow",
+            "post-wildfire",
+            "hazard assessment"
+        ],
+        "languages": [
+            "Python"
+        ],
+        "contact": {
+            "name": "Jonathan King",
+            "email": "jking@usgs.gov"
+        },
+        "date": {
+            "metadataLastUpdated": "2025-02-26"
+        }
+    },
+    {
+        "name": "wildcat",
+        "organization": "U.S. Geological Survey",
+        "description": "Tool to assess and map post-wildfire debris-flow hazards",
+        "version": "1.0.0",
+        "status": "Production",
+        "permissions": {
+            "usageType": "openSource",
+            "licenses": [
+                {
+                    "name": "GNU General Public License Version 3",
+                    "URL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/raw/1.0.0/LICENSE.md"
+                }
+            ]
+        },
+        "homepageURL": "https://code.usgs.gov/ghsc/lhp/wildcat",
+        "downloadURL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/archive/1.0.0/wildcat-1.0.0.zip",
+        "disclaimerURL": "https://code.usgs.gov/ghsc/lhp/wildcat/-/raw/1.0.0/DISCLAIMER.md",
+        "repositoryURL": "https://code.usgs.gov/ghsc/lhp/wildcat.git",
+        "vcs": "git",
+        "laborHours": 400,
+        "tags": [
+            "debris-flow",
+            "post-wildfire",
+            "hazard assessment"
+        ],
+        "languages": [
+            "Python"
+        ],
+        "contact": {
+            "name": "Jonathan King",
+            "email": "jking@usgs.gov"
+        },
+        "date": {
+            "metadataLastUpdated": "2024-09-20"
+        }
+    }
+]

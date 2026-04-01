@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../services/ml_predictions_service.dart';
+
 /// Parsed result from a GeoJSON FeatureCollection.
 class ParsedGeoJson {
   final List<SubBasinFeature> features;
@@ -129,6 +131,22 @@ ParsedGeoJson parseGeoJson(Map<String, dynamic> geojson) {
   return ParsedGeoJson(features: features, bounds: bounds);
 }
 
+/// Color for an ML risk category (quantile-based, experimental).
+Color getMlRiskColor(String riskCategory) {
+  switch (riskCategory) {
+    case 'Very High':
+      return Colors.red.withValues(alpha: 0.75);
+    case 'High':
+      return Colors.orange.withValues(alpha: 0.70);
+    case 'Moderate':
+      return Colors.yellow.withValues(alpha: 0.60);
+    case 'Low':
+      return Colors.green.withValues(alpha: 0.55);
+    default:
+      return Colors.grey.withValues(alpha: 0.40);
+  }
+}
+
 /// Get hazard-based color for a sub-basin based on debris-flow probability.
 Color getHazardColor(Map<String, dynamic> props) {
   // Use P_3 (debris-flow probability at 40mm/hr rainfall)
@@ -154,12 +172,16 @@ List<Polygon> buildPolygons({
   int? selectedIndex,
   required void Function(int index) onTap,
   bool dimmed = false,
+  Map<String, MlPrediction>? mlData,
 }) {
   return features.map<Polygon>((feature) {
     final isSelected = feature.index == selectedIndex;
 
-    // Color by hazard level if P_3 exists, otherwise use default blue
-    Color defaultColor = getHazardColor(feature.properties);
+    // Color by ML risk category if mlData provided, otherwise by Staley hazard
+    final mlPred = mlData?[feature.label];
+    Color defaultColor = mlPred != null
+        ? getMlRiskColor(mlPred.riskCategory)
+        : getHazardColor(feature.properties);
     if (dimmed) {
       // Halve the alpha when dimmed to push full-fire basins into background
       defaultColor = defaultColor.withValues(alpha: defaultColor.a * 0.4);

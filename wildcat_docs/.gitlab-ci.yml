@@ -1,0 +1,178 @@
+stages:
+  - build
+  - test
+  - deploy
+
+default:
+  tags:
+    - us-west-2
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_TAG
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+
+
+#####
+# Python Versions
+#####
+
+# Base versions have no dependencies, so can be used for builds
+
+.image:
+  image: "python:3.$VERSION"
+
+.python11-base:
+  variables:
+    VERSION: '11'
+  extends: .image
+
+.python12-base:
+  variables:
+    VERSION: '12'
+  extends: .image
+
+.python13-base:
+  variables:
+    VERSION: '13'
+  extends: .image
+
+# Everything else requires specific build artifacts
+
+.activate:
+  before_script:
+    - source venv-$VERSION/bin/activate
+
+.python11:
+  extends: 
+    - .python11-base
+    - .activate
+  dependencies: 
+    - build11
+
+.python12:
+  extends: 
+    - .python12-base
+    - .activate
+  dependencies: 
+    - build12
+
+.python13:
+  extends: 
+    - .python13-base
+    - .activate
+  dependencies: 
+    - build13
+
+# Alias to the latest supported python version
+.latest-python:
+  extends: .python13
+
+
+#####
+# Build
+#####
+
+.build:
+  # Forces daily builds to install from the latest dependencies
+  before_script:
+    - if [ "$CI_PIPELINE_SOURCE" == "schedule" ]; then rm poetry.lock; fi
+  script:
+    - pip install virtualenv
+    - virtualenv "venv-$VERSION"
+    - source "venv-$VERSION/bin/activate"
+    - pip install poetry
+    - poetry install --all-groups --all-extras
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - "venv-$VERSION"
+
+build11:
+  stage: build
+  extends: 
+    - .python11-base
+    - .build
+
+build12:
+  stage: build
+  extends:
+    - .python12-base
+    - .build
+
+build13:
+  stage: build
+  extends:
+    - .python13-base
+    - .build
+
+
+#####
+# Tests: Safety, Formatting, Tests
+#####
+
+audit:
+  stage: test
+  extends: .latest-python
+  script:
+    - poe audit
+
+format:
+  stage: test
+  extends: .latest-python
+  script:
+    - poe lint
+
+.test:
+  stage: test
+  script:
+    - poe tests
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
+  artifacts:
+    expire_in: 1 hour
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+test11:
+  extends:
+    - .test
+    - .python11
+
+test12:
+  extends:
+    - .test
+    - .python12
+
+test13:
+  extends:
+    - .test
+    - .python13
+
+
+#####
+# Deploy: Packaging
+#####
+
+pages:
+  stage: deploy
+  extends: .latest-python
+  when: manual
+  script:
+    - poe docs
+  artifacts:
+    paths:
+    - public
+
+release:
+  stage: deploy
+  extends: .latest-python
+  rules:
+    - if: $CI_COMMIT_TAG
+  script:
+    - poetry build
+    - TWINE_PASSWORD=${CI_JOB_TOKEN} TWINE_USERNAME=gitlab-ci-token python -m twine upload --repository-url ${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/packages/pypi dist/*

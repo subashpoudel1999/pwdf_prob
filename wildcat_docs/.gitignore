@@ -1,0 +1,20 @@
+# Python cache and test cache
+__pycache__
+.pytest_cache
+
+# Coverage reports
+.coverage
+htmlcov
+coverage.xml
+coverage.json
+coverage.lcov
+
+# Poetry package and environment
+.venv
+dist
+
+# Documentation builds
+public
+
+# IDEs
+.vscode

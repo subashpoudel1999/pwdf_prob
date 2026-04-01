@@ -1,521 +1,413 @@
-# Wildfire Debris-Flow Hazard Dashboard - Architecture
+# Post-Wildfire Debris-Flow Dashboard — Architecture
 
-**Last Updated:** February 16, 2026
-**Status:** Production Ready (MVP)
+**Last Updated:** March 2026
+**Status:** Active Development
 
 ---
 
 ## Overview
 
-This Flutter web application displays post-wildfire debris-flow hazard assessments for the Franklin Fire (2024) using results from the USGS Wildcat toolkit. The system serves pre-computed analysis results and provides spatial filtering for custom area analysis.
+A Flutter web application + Python FastAPI backend for running and visualising post-wildfire debris-flow hazard assessments. The system supports three fires at different stages of capability:
+
+| Fire | Year | Location | Analysis Mode |
+|---|---|---|---|
+| Franklin | 2024 | Malibu, CA | Pre-computed (Wildcat USGS) |
+| Palisades | 2021 | Pacific Palisades, CA | Live — local DEM + dNBR |
+| Dolan | 2020 | Big Sur, CA | Live — local DEM *or* GEE DEM |
+
+The app runs as **two separate processes** — Flutter frontend and Python backend — that communicate over HTTP. Restarting Flutter does not restart the backend.
 
 ---
 
 ## System Architecture
 
-### Technology Stack
+```
+┌──────────────────────────────────────────────────────────┐
+│  Flutter Web App (port ~56075)                           │
+│                                                          │
+│  HomeScreen                                              │
+│    ├── FranklinFireScreen  (pre-computed basins)         │
+│    ├── PalisadesFireScreen (live WBT pipeline)           │
+│    ├── DolanFireScreen     (live WBT + local DEM)        │
+│    └── GeeDolanScreen      (live WBT + GEE DEM)          │
+└───────────────────┬──────────────────────────────────────┘
+                    │ HTTP / JSON (port 8000)
+┌───────────────────▼──────────────────────────────────────┐
+│  FastAPI Backend (port 8000)                             │
+│                                                          │
+│  /api/v1/fires/*         wildcat_service + gis_service   │
+│  /api/v1/palisades/*     palisades_service               │
+│  /api/v1/dolan/*         dolan_service                   │
+│  /api/v1/gee/*           dolan_gee_service + gee_service │
+└───────────────────┬──────────────────────────────────────┘
+                    │
+         ┌──────────┴──────────┐
+         │                     │
+   WhiteboxTools           Google Earth Engine
+   (local binary)          (USGS 3DEP DEM)
+```
+
+---
+
+## Technology Stack
 
 **Frontend:**
-- Flutter 3.x (Web/Mobile)
-- flutter_map for interactive mapping
-- http package for API communication
-- Dart GeoJSON parsing utilities
+- Flutter 3.x (Web target, `flutter run -d chrome`)
+- `flutter_map` v8 — interactive Leaflet-based map
+- `http` package — REST calls to backend
 
 **Backend:**
-- FastAPI (Python 3.13)
-- Shapely for spatial operations
-- Pre-computed Wildcat results (basins.geojson)
+- Python 3.13 / FastAPI + uvicorn
+- WhiteboxTools (local binary at `WBT/`) — hydrological processing
+- rasterio, geopandas, shapely, numpy — raster/vector GIS
+- `earthengine-api` (`ee`) — GEE DEM acquisition
 
-**Data Source:**
-- Wildcat USGS v1.1.0 pre-computed results
-- Franklin Fire 2024 (Malibu, California)
-- 51 debris-flow hazard basins
-
----
-
-## Key Design Decision: Why Pre-Computed Results?
-
-**The Challenge:**
-Wildcat requires the private USGS package `pfdf>=3.0.0` which is not publicly available. This package provides core functionality for:
-- Raster operations (`pfdf.raster.Raster`)
-- Debris-flow models (Staley 2017, Gartner 2014, Cannon 2010)
-- Segment/basin delineation
-- Watershed analysis
-
-**Our Solution:**
-Instead of running Wildcat programmatically, we:
-1. Use the existing pre-computed Franklin Fire analysis results
-2. Serve `wildcat/franklin-fire/assessment/basins.geojson` via FastAPI
-3. Implement spatial filtering (not full re-analysis) for custom polygons
-
-This approach provides a working MVP while maintaining the ability to display real debris-flow hazard data.
+**External Services:**
+- Google Earth Engine — USGS 3DEP 10m DEM on-demand download (requires prior `earthengine authenticate`)
 
 ---
 
-## Backend Architecture
-
-### Directory Structure
+## Directory Structure
 
 ```
-backend/
-├── main.py                    # FastAPI app entry point
-├── api/
-│   └── routes.py              # API endpoints
-├── services/
-│   ├── wildcat_service.py     # Loads pre-computed results
-│   └── gis_service.py         # Spatial filtering
-└── data/
-    └── projects/
-        └── franklin-fire/
-            ├── inputs/        # DEM, dNBR, severity, perimeter
-            ├── preprocessed/  # Wildcat preprocessed rasters
-            └── assessment/    # basins.geojson (KEY FILE)
+fire_webapp/
+├── lib/                          # Flutter frontend
+│   ├── main.dart
+│   ├── screens/
+│   │   ├── home_screen.dart
+│   │   ├── franklin_fire_screen.dart
+│   │   ├── palisades_fire_screen.dart
+│   │   ├── dolan_fire_screen.dart
+│   │   ├── gee_dolan_screen.dart
+│   │   ├── enhanced_map_screen.dart
+│   │   ├── area_prediction_screen.dart
+│   │   └── custom_analysis_screen.dart
+│   ├── widgets/
+│   │   ├── attribute_panel.dart
+│   │   ├── area_selection_controls.dart
+│   │   └── prediction_panel.dart
+│   ├── services/
+│   │   ├── wildcat_service.dart   # HTTP client for Franklin Fire
+│   │   └── api_service.dart
+│   ├── utils/
+│   │   └── geojson_parser.dart    # GeoJSON → flutter_map + hazard colours
+│   ├── models/
+│   │   └── fire_data.dart
+│   └── config/
+│       └── app_config.dart
+│
+├── backend/
+│   ├── main.py                    # FastAPI app entry point + CORS
+│   ├── api/
+│   │   └── routes.py              # All API endpoints
+│   ├── services/
+│   │   ├── wildcat_service.py     # Franklin Fire pre-computed results
+│   │   ├── gis_service.py         # Spatial filtering (Franklin)
+│   │   ├── palisades_service.py   # Live pipeline — Palisades (UTM 11N)
+│   │   ├── dolan_service.py       # Live pipeline — Dolan (UTM 10N)
+│   │   ├── dolan_gee_service.py   # Extends DolanService; GEE Step 2 override
+│   │   └── gee_service.py         # GEE auth + DEM download helper
+│   └── data/
+│       ├── projects/
+│       │   └── franklin-fire/
+│       │       └── assessment/
+│       │           └── basins.geojson   # 51-basin pre-computed result
+│       ├── palisades_cache/             # basins.geojson, perimeter.geojson
+│       └── dolan_cache/                 # basins.geojson, perimeter.geojson, metadata.json
+│
+├── assets/
+│   └── data/
+│       ├── fire_perimeter.shp           # Dolan Fire perimeter
+│       ├── dolan_dem_3dep10m.tif        # Local DEM (~1.1 GB, optional with GEE)
+│       ├── dolan_inputs_all/
+│       │   ├── *_dnbr.tif
+│       │   ├── *_rdnbr.tif
+│       │   └── *_dnbr6.tif
+│       └── 20??_*.json                  # Reference fire catalog (Wildcat outputs)
+│
+└── notebooks/
+    └── calibrate_dolan2.ipynb           # MTBS vs local dNBR calibration
 ```
-
-### API Endpoints
-
-**1. Get Franklin Fire Results**
-```
-GET /api/v1/fires/franklin-fire/results
-```
-Returns: GeoJSON FeatureCollection with 51 debris-flow hazard basins
-
-**2. Get Fire Status**
-```
-GET /api/v1/fires/franklin-fire/status
-```
-Returns:
-```json
-{
-  "fire_id": "franklin-fire",
-  "status": "completed",
-  "has_results": true,
-  "feature_count": 51,
-  "source": "pre-computed"
-}
-```
-
-**3. Custom Area Analysis**
-```
-POST /api/v1/custom-analysis
-Content-Type: application/json
-
-{
-  "polygon": {
-    "type": "Polygon",
-    "coordinates": [[[-118.71, 34.07], ...]]
-  }
-}
-```
-Returns: Filtered basins that intersect user polygon + statistics
-
-**4. Get Fire Info**
-```
-GET /api/v1/fires/franklin-fire/info
-```
-Returns: Metadata about fire, data sources, model parameters
-
-**5. Health Check**
-```
-GET /health
-```
-Returns: `{"status": "ok", "service": "wildcat-api"}`
 
 ---
 
-## Data Format: basins.geojson
+## Fire Analysis Modes
 
-### Structure
-```json
-{
-  "type": "FeatureCollection",
-  "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:EPSG::4269"}},
-  "features": [
-    {
-      "type": "Feature",
-      "properties": {
-        "Segment_ID": 4,
-        "Area_km2": 0.17,
-        "BurnRatio": 0.94,
-        "Slope": 0.27,
+### Mode 1 — Pre-Computed (Franklin Fire)
 
-        "H_0": 1.0,  "P_0": 0.14,  "V_0": 1574.25,
-        "H_1": 1.0,  "P_1": 0.20,  "V_1": 1892.53,
-        "H_2": 2.0,  "P_2": 0.28,  "V_2": 2235.32,
-        "H_3": 2.0,  "P_3": 0.70,  "V_3": 3897.58,
+The Franklin Fire analysis was run externally using the Wildcat USGS v1.1.0 toolkit (which requires the private `pfdf` package). The backend simply serves `basins.geojson` and performs spatial filtering for user-drawn polygons. No live computation.
 
-        "Vmin_0_0": 205.03,  "Vmax_0_0": 12087.15,
-        ...
-      },
-      "geometry": {
-        "type": "Polygon",
-        "coordinates": [[[-118.702843, 34.072919], ...]]
-      }
-    }
-  ]
-}
-```
+### Mode 2 — Live Local Pipeline (Palisades + Dolan)
 
-### Key Properties
+The full 10-step pipeline runs on-demand in a background thread:
 
-**Watershed Characteristics:**
-- `Area_km2`: Basin catchment area
-- `BurnRatio`: Proportion of burned area (0-1)
-- `Slope`: Average slope gradient
-- `DevAreaKm2`: Developed area in km²
+| Step | Description | Tool |
+|---|---|---|
+| 1 | Validate input files | — |
+| 2 | Reproject DEM to UTM, clip to perimeter + buffer | rasterio |
+| 3 | Fill topographic depressions | WhiteboxTools |
+| 4 | D8 flow direction | WhiteboxTools |
+| 5 | D8 flow accumulation | WhiteboxTools |
+| 6 | Extract stream network | WhiteboxTools |
+| 7 | Delineate sub-basins, vectorise, clip, filter by area | WhiteboxTools + geopandas |
+| 8 | Zonal slope + burn severity per basin | rasterio + numpy |
+| 9 | Staley (2017) M1 + Gartner (2014) + Cannon (2010) | numpy |
+| 10 | Export GeoJSON to cache | json |
 
-**Hazard Results (for 4 rainfall intensities: 16, 20, 24, 40 mm/hr):**
-- `H_0, H_1, H_2, H_3`: Combined hazard classification (1=Low, 2=Moderate, 3=High)
-- `P_0, P_1, P_2, P_3`: Debris-flow probability (0-1)
-- `V_0, V_1, V_2, V_3`: Potential sediment volume (m³)
-- `Vmin_*_0, Vmax_*_0`: Volume confidence bounds (95% CI)
+Results are cached in `backend/data/{fire}_cache/basins.geojson`. Re-analysis is triggered with `force=True`.
 
-**Rainfall Thresholds:**
-- `I_*_*`: Rainfall intensity thresholds (mm/hr)
-- `R_*_*`: Rainfall accumulation thresholds (mm)
+**Pipeline parameters:**
+
+| Parameter | Palisades | Dolan |
+|---|---|---|
+| UTM zone | 11N (EPSG:32611) | 10N (EPSG:32610) |
+| DEM buffer | 500 m | 1000 m |
+| Stream threshold | 250 cells ≈ 0.025 km² | 1500 cells ≈ 0.15 km² |
+| Basin area filter | 0.01 – 8.0 km² | 0.01 – 3.0 km² |
+
+### Mode 3 — Live GEE Pipeline (Dolan GEE)
+
+`DolanGeeService` inherits `DolanService` and overrides only Step 2. Instead of opening the local 1.1 GB GeoTIFF, it:
+
+1. Authenticates with GEE using locally stored credentials (`earthengine authenticate`)
+2. Downloads USGS 3DEP 10m DEM clipped to perimeter + 1 km buffer (~20 MB) via `getDownloadURL()`
+3. Reprojects to UTM 10N
+
+Steps 3–10 are identical to Mode 2. The `gee_service` module enforces a 700 km² hard limit before attempting any download.
 
 ---
 
-## Frontend Architecture
+## Debris-Flow Models
 
-### Key Screens
+### Staley (2017) M1 — Likelihood
 
-**1. Home Screen** ([home_screen.dart](lib/screens/home_screen.dart))
-- Large Franklin Fire hero card
-- Search functionality for other fires
-- "Area Selection" tool card
+Logistic regression for debris-flow probability P:
 
-**2. Franklin Fire Screen** ([franklin_fire_screen.dart](lib/screens/franklin_fire_screen.dart))
-- Full Franklin Fire analysis display
-- 5 map layer options: Satellite, Terrain, Dark, Topo, Standard
-- Custom polygon drawing for sub-area analysis
-- Interactive basin selection with attribute panel
-- Hazard color-coding (red/orange/yellow/green by P_3)
+```
+R15 = I15 × (15/60)   # 15-min rainfall accumulation (mm)
+T   = sin(2 × slope_rad)   # terrain term
+F   = high_sev_ratio        # fraction of basin with high-severity burn
+S   = 0.15                  # soil erodibility Kf (constant — see Limitations)
 
-**3. Custom Analysis Screen** ([custom_analysis_screen.dart](lib/screens/custom_analysis_screen.dart))
-- Standalone polygon drawing tool
-- Filters Franklin Fire basins to user area
-- Displays hazard statistics
-
-### Services
-
-**WildcatService** ([lib/services/wildcat_service.dart](lib/services/wildcat_service.dart))
-```dart
-static Future<bool> hasResults(String fireId)
-static Future<Map<String, dynamic>> fetchWildcatResults(String fireId)
-static Future<String> getAnalysisStatus(String fireId)
-static Future<Map<String, dynamic>> getFireInfo(String fireId)
+logit = -3.63 + (0.41 + 0.369×R15)×T + (0.67 + 0.603×R15)×F + (0.07 + 0.693×R15)×S
+P = 1 / (1 + exp(-logit))
 ```
 
-### Utilities
+### Gartner (2014) — Volume
 
-**GeoJSON Parser** ([lib/utils/geojson_parser.dart](lib/utils/geojson_parser.dart))
-- `parseGeoJson()`: Converts GeoJSON to Flutter map objects
-- `getHazardColor()`: Maps P_3 probability to color
-  - P_3 ≥ 0.7: Red (High)
-  - P_3 ≥ 0.4: Orange (Moderate)
-  - P_3 ≥ 0.2: Yellow (Low)
-  - P_3 < 0.2: Green (Very Low)
+OLS regression for peak sediment volume V (m³). **Note: the Dolan and Palisades implementations differ:**
+
+**Dolan** (`dolan_service.py`):
+```
+log10(V) = -0.699 + 0.989×log10(I15) + 0.369×log10(Bmh_km2) + 1.223×log10(Relief_m)
+```
+where `Bmh_km2 = high_sev_ratio × area_km2` and `Relief_m = max − min elevation`.
+
+**Palisades** (`palisades_service.py`):
+```
+log10(V) = -1.87 + 0.56×log10(I15) + 0.97×log10(Area_km2) + 0.61×high_sev_ratio
+```
+
+### Cannon (2010) — Hazard Classification
+
+**Dolan** (P-only thresholds):
+
+| H | Condition |
+|---|---|
+| 3 | P ≥ 0.60 |
+| 2 | P ≥ 0.40 |
+| 1 | P ≥ 0.20 |
+| 0 | P < 0.20 |
+
+**Palisades** (joint P + V thresholds):
+
+| H | Condition |
+|---|---|
+| 3 | P ≥ 0.60 **and** V ≥ 1000 m³ |
+| 2 | P ≥ 0.40 **or** V ≥ 500 m³ |
+| 1 | P ≥ 0.20 **or** V ≥ 100 m³ |
+| 0 | otherwise |
+
+**Rainfall scenarios:** I15 ∈ [16, 20, 24, 40] mm/hr → properties P_0…P_3, V_0…V_3, H_0…H_3
+
+---
+
+## API Reference
+
+All routes are under the `/api/v1` prefix. The backend runs on port 8000.
+
+### Franklin Fire
+
+| Method | Path | Description |
+|---|---|---|
+| GET | `/fires/{fire_id}/results` | GeoJSON basins (pre-computed) |
+| GET | `/fires/{fire_id}/status` | Job status + feature count |
+| GET | `/fires/{fire_id}/info` | Fire metadata |
+| POST | `/custom-analysis` | Filter basins to user polygon |
+
+### Palisades Fire
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/palisades/analyze` | Start full pipeline (`?force=true` to re-run) |
+| GET | `/palisades/status/{job_id}` | Poll progress (step 1–10, 0–100%) |
+| GET | `/palisades/results` | Cached basins GeoJSON |
+| GET | `/palisades/perimeter` | Fire perimeter GeoJSON (WGS84) |
+| POST | `/palisades/analyze-zone` | Re-run pipeline clipped to user polygon |
+| GET | `/palisades/zone-results/{job_id}` | Zone analysis results |
+| POST | `/palisades/custom-analysis` | Spatial filter only (no re-analysis) |
+| DELETE | `/palisades/cache` | Clear cached results |
+
+### Dolan Fire (local DEM)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/dolan/analyze` | Start full pipeline (`?burn_metric=dnbr\|rdnbr\|dnbr6`) |
+| GET | `/dolan/status/{job_id}` | Poll progress |
+| GET | `/dolan/results` | Cached basins GeoJSON |
+| GET | `/dolan/perimeter` | Fire perimeter GeoJSON |
+| GET | `/dolan/available-inputs` | List available burn severity datasets |
+| GET | `/dolan/preview/{dataset}` | Georeferenced PNG overlay (base64) |
+| POST | `/dolan/analyze-zone` | Re-run pipeline clipped to user polygon |
+| GET | `/dolan/zone-results/{job_id}` | Zone analysis results |
+| DELETE | `/dolan/cache` | Clear cached results |
+
+### GEE Routes (Dolan via Google Earth Engine)
+
+| Method | Path | Description |
+|---|---|---|
+| POST | `/gee/test-connection` | Validate GEE credentials + project ID |
+| POST | `/gee/validate-area` | Check polygon fits within 700 km² DEM limit |
+| POST | `/gee/dolan/analyze` | Start GEE-based full pipeline |
+| GET | `/gee/dolan/status/{job_id}` | Poll progress |
+| GET | `/gee/dolan/results` | Results (shares dolan cache) |
+| GET | `/gee/dolan/perimeter` | Fire perimeter GeoJSON |
+| GET | `/gee/dolan/available-inputs` | Burn severity dataset list |
+| POST | `/gee/dolan/analyze-zone` | Re-run pipeline (GEE DEM + user polygon) |
+| GET | `/gee/dolan/zone-results/{job_id}` | Zone results |
+
+---
+
+## Frontend Screens
+
+| Screen | Route / Entry | Description |
+|---|---|---|
+| `HomeScreen` | App root | Navigation hub — featured fire cards + Palisades button |
+| `FranklinFireScreen` | Home card | Pre-computed Franklin Fire map + polygon draw |
+| `PalisadesFireScreen` | App bar button | Live Palisades analysis, progress bar, zone draw |
+| `DolanFireScreen` | Home card | Live Dolan analysis, burn metric selector (dNBR / rdNBR / dNBR6) |
+| `GeeDolanScreen` | Home card | GEE-based Dolan analysis, GEE project ID input |
+| `EnhancedMapScreen` | Home card | General enhanced map viewer |
+| `AreaPredictionScreen` | Home card | Area-based prediction tool |
+| `CustomAnalysisScreen` | Home | Custom polygon filter for Franklin Fire |
+
+### Zone Analysis Flow (Palisades + Dolan)
+
+1. User draws polygon on map → Flutter sends `POST /palisades/analyze-zone` or `/dolan/analyze-zone`
+2. Backend clips DEM to polygon + buffer, runs full 10-step WBT pipeline in background thread
+3. Results saved as `zone_{job_id}.geojson` in cache dir
+4. Flutter polls `GET /*/status/{job_id}` until `status == "completed"`
+5. Flutter fetches `GET /*/zone-results/{job_id}`
+6. Map: full fire basins dimmed (40% opacity), zone basins at full opacity, white boundary outline
+
+### Key flutter_map Notes
+
+- `Polygon` has no `onTap` — basin selection uses `MapOptions.onTap` + ray-casting `_pointInPolygon()` in `geojson_parser.dart`
+- `fitCamera` calls must be wrapped in `WidgetsBinding.instance.addPostFrameCallback`
+- Hazard colour mapping in `geojson_parser.dart`:
+  - P_3 ≥ 0.60 → Red (High)
+  - P_3 ≥ 0.40 → Orange (Moderate)
+  - P_3 ≥ 0.20 → Yellow (Low)
+  - P_3 < 0.20 → Green (Very Low)
+
+---
+
+## Input Data
+
+| Fire | File | Source | Notes |
+|---|---|---|---|
+| Palisades | `2021_PALISADES_May152021_dem.tif` | Local | Hardcoded absolute path in `palisades_service.py` |
+| Palisades | `*_dnbr.tif` | MTBS | Same folder |
+| Palisades | `*_burn_bndy.shp` | MTBS | Same folder |
+| Dolan | `dolan_dem_3dep10m.tif` | 3DEP (local) | ~1.1 GB; not needed when using GEE mode |
+| Dolan | `dolan_inputs_all/*_dnbr.tif` | MTBS | 3 metrics: dNBR, rdNBR, dNBR6 |
+| Dolan | `fire_perimeter.shp` | MTBS | In `assets/data/` |
+| Franklin | `basins.geojson` | Wildcat v1.1.0 | 51 features, pre-computed |
+
+---
+
+## Known Assumptions and Limitations
+
+These are baked into the current code — relevant for any research use:
+
+1. **Constant Kf = 0.15** — soil erodibility is hardcoded for all basins in both Palisades and Dolan. Real values from STATSGO/SSURGO vary 0.05–0.55 and are the primary driver of inter-basin probability spread.
+2. **Mean pixel slope** — Staley (2017) specifies the gradient of the longest flow path; the code uses the arithmetic mean of all DEM pixels in the basin.
+3. **Gartner implementations differ between fires** — Dolan uses `Bmh_km2` + `Relief_m`; Palisades uses total `Area_km2` + raw `high_sev_ratio`. Volume values are not directly comparable.
+4. **Hazard classification differs between fires** — Dolan uses P-only thresholds; Palisades uses joint P+V thresholds. H values are not comparable across fires.
+5. **Fixed I15 design storms** — [16, 20, 24, 40] mm/hr are adopted from wildcat config, not derived from site-specific IDF curves.
+6. **Silent fallback values** — basins that throw exceptions during zonal stats are replaced with hardcoded default values rather than flagged as invalid.
 
 ---
 
 ## Running the Application
 
-### 1. Start Backend
+### Backend
 
 ```bash
 cd backend
 python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-**Verify:**
-```bash
-curl http://localhost:8000/health
-curl http://localhost:8000/api/v1/fires/franklin-fire/status
+**If port 8000 is already in use (WinError 10013):**
+```powershell
+Stop-Process -Id (netstat -ano | Select-String ':8000.*LISTENING' | ForEach-Object { ($_ -split '\s+')[-1] }) -Force
 ```
 
-### 2. Start Flutter App
+### Frontend
 
 ```bash
 flutter run -d chrome
 ```
 
-**Or for mobile:**
+### GEE Setup (one-time per machine)
+
 ```bash
-flutter run
+pip install earthengine-api
+earthengine authenticate
 ```
+
+Then provide your GEE project ID (e.g. `ee-yourname`) in the GEE Dolan screen.
 
 ---
 
-## Testing
+## Calibration Notebooks
 
-### Backend Tests
+`notebooks/calibrate_dolan2.ipynb` — compares MTBS burn severity (downloaded from GEE) against local dNBR files for the Dolan Fire, and validates Staley P predictions against Wildcat reference output.
 
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Get Franklin Fire status
-curl http://localhost:8000/api/v1/fires/franklin-fire/status
-
-# Get results (51 basins)
-curl http://localhost:8000/api/v1/fires/franklin-fire/results | jq '.features | length'
-
-# Custom analysis
-curl -X POST http://localhost:8000/api/v1/custom-analysis \
-  -H "Content-Type: application/json" \
-  -d @test_polygon.json
-```
-
-### Expected Results
-
-- **Health**: `{"status":"ok","service":"wildcat-api"}`
-- **Status**: `{"fire_id":"franklin-fire","status":"completed","has_results":true,"feature_count":51,"source":"pre-computed"}`
-- **Results**: 51 basin features with P_0, P_1, P_2, P_3 properties
-
----
-
-## Understanding Wildcat Workflow
-
-For reference, here's how Wildcat processes fire data (not implemented in MVP):
-
-### 1. **Input Data**
-- `perimeter`: Fire boundary shapefile
-- `dem`: Digital Elevation Model (10m resolution)
-- `dnbr`: Difference Normalized Burn Ratio raster
-- `severity`: BARC4 burn severity raster
-- `kf`: K-factor (soil erodibility), can be constant or raster
-
-### 2. **Preprocess**
-```bash
-wildcat preprocess
-```
-- Buffers fire perimeter (3km default)
-- Reprojects all rasters to DEM CRS
-- Clips to buffered perimeter
-- Constrains dNBR/severity values
-- Creates water/development masks
-
-**Output**: `preprocessed/` folder with cleaned rasters
-
-### 3. **Assess**
-```bash
-wildcat assess
-```
-- Analyzes watershed (flow directions, slopes, relief)
-- Delineates stream segment network
-- Filters segments by physical criteria
-- Applies debris-flow models:
-  - **Staley 2017 M1**: Likelihood estimation
-  - **Gartner 2014**: Potential sediment volumes
-  - **Cannon 2010**: Combined hazard classification
-- Locates terminal outlet basins
-
-**Output**: `assessment/basins.geojson`, `segments.geojson`, `outlets.geojson`
-
-### 4. **Export**
-```bash
-wildcat export
-```
-- Converts to desired format (Shapefile, GeoJSON, etc.)
-- Filters properties for export
-- Reprojects to WGS84 or other CRS
-
-**Output**: `exports/` folder with final products
-
----
-
-## Hazard Models
-
-### Staley 2017 M1 (Debris-Flow Likelihood)
-
-Estimates probability of debris-flow occurrence given a rainfall event:
-
-**Inputs:**
-- I₁₅: Peak 15-minute rainfall intensity (mm/hr)
-- dNBR: Burn severity (via dNBR)
-- K: Soil erodibility factor
-- Terrain relief
-
-**Output:** P (probability from 0 to 1)
-
-### Gartner 2014 (Sediment Volume)
-
-Estimates potential sediment volume:
-
-**Inputs:**
-- Burned catchment area
-- Terrain relief
-- Burn severity
-
-**Output:** V (volume in m³) with 95% confidence interval
-
-### Cannon 2010 (Combined Hazard)
-
-Classifies combined hazard based on P and V:
-
-- **Class 1 (Low)**: Low probability OR small volume
-- **Class 2 (Moderate)**: Moderate P and V
-- **Class 3 (High)**: High probability AND large volume
-
----
-
-## Custom Analysis Implementation
-
-Since we can't run Wildcat without the private `pfdf` package, custom analysis works via **spatial filtering**:
-
-### How It Works
-
-1. **User draws polygon** on Franklin Fire map
-2. **Flutter sends GeoJSON** to `/api/v1/custom-analysis`
-3. **Backend (GISService):**
-   - Loads full Franklin Fire basins
-   - Converts user polygon to Shapely geometry
-   - Filters basins: `basin.intersects(user_polygon)`
-   - Calculates statistics (count, area, hazard distribution)
-4. **Returns filtered basins** to Flutter
-5. **Flutter displays** only basins within custom area
-
-### Limitations
-
-- ✅ **Works**: Viewing basins within custom area
-- ✅ **Works**: Getting hazard statistics for custom area
-- ❌ **Doesn't Work**: Re-running Wildcat analysis with new DEM/perimeter
-- ❌ **Doesn't Work**: Uploading completely new fire data
-
-This is sufficient for the MVP - users can explore different sub-areas of the Franklin Fire.
-
----
-
-## Future Enhancements
-
-### If `pfdf` Becomes Available
-
-1. **Full Wildcat Integration**
-   - Call `from wildcat import preprocess, assess, export` directly
-   - Upload fire data (DEM, dNBR, severity, perimeter)
-   - Run live analysis, not just serve pre-computed results
-
-2. **Multiple Fires**
-   - Support fires beyond Franklin Fire
-   - Database storage for analysis results
-   - Fire library/catalog
-
-3. **Real-Time Analysis**
-   - Progress tracking during Wildcat runs
-   - WebSocket updates for long-running assessments
-   - Queue system for multiple analyses
-
-### MVP Improvements
-
-1. **Enhanced Visualization**
-   - 3D terrain view
-   - Animation of hazard scenarios
-   - Volume visualization (graduated symbols)
-
-2. **Export Features**
-   - Download filtered GeoJSON
-   - PDF report generation
-   - CSV export of basin properties
-
-3. **Comparison Tools**
-   - Compare different rainfall scenarios
-   - Compare custom areas
-   - Historical fire comparisons
+**Key findings from the calibration:**
+- MTBS and local dNBR are highly correlated for burn fraction (r = 0.982) — MTBS can substitute local dNBR
+- MTBS classifies ~75% more moderate-high severity area than the dNBR ≥ 500 threshold
+- Both sources produce near-identical, heavily saturated P predictions (≈ 98% H3) for the Dolan Fire, confirming that the constant Kf assumption dominates at high burn severity
 
 ---
 
 ## Troubleshooting
 
-### Backend Won't Start
-
-**Error:** `ModuleNotFoundError: No module named 'fastapi'`
-
-**Fix:**
-```bash
-pip install fastapi uvicorn shapely
-```
-
-### Backend 404 on `/custom-analysis`
-
-**Cause:** Backend didn't reload after code changes
-
-**Fix:**
-```bash
-taskkill //F //IM python.exe
-cd backend
-python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### Flutter Can't Connect to Backend
-
-**Error:** `Failed to fetch Wildcat results: SocketException`
-
-**Fix:**
-1. Ensure backend is running: `curl http://localhost:8000/health`
-2. Check CORS is enabled in `backend/main.py`
-3. For mobile/other devices, update `lib/services/wildcat_service.dart`:
-   ```dart
-   static const String baseUrl = 'http://YOUR_IP:8000/api/v1';
-   ```
-
-### No Basins Displayed
-
-**Cause:** basins.geojson file missing
-
-**Fix:**
-```bash
-ls "backend/data/projects/franklin-fire/assessment/basins.geojson"
-```
-If missing, copy from wildcat folder:
-```bash
-cp "wildcat/franklin-fire/assessment/basins.geojson" \
-   "backend/data/projects/franklin-fire/assessment/"
-```
-
----
-
-## File Manifest
-
-### Backend (Python)
-- `backend/main.py` - FastAPI app
-- `backend/api/routes.py` - API endpoints
-- `backend/services/wildcat_service.py` - Loads pre-computed results
-- `backend/services/gis_service.py` - Spatial filtering
-- `backend/requirements.txt` - Python dependencies
-
-### Frontend (Flutter)
-- `lib/screens/franklin_fire_screen.dart` - Main analysis screen
-- `lib/screens/custom_analysis_screen.dart` - Custom polygon tool
-- `lib/screens/home_screen.dart` - Landing page
-- `lib/services/wildcat_service.dart` - Backend HTTP client
-- `lib/utils/geojson_parser.dart` - GeoJSON parsing + hazard colors
-- `lib/widgets/attribute_panel.dart` - Basin property display
-
-### Data
-- `wildcat/franklin-fire/assessment/basins.geojson` - Source data (268 KB, 51 features)
-- `backend/data/projects/franklin-fire/` - Copy used by backend
+| Symptom | Cause | Fix |
+|---|---|---|
+| `WinError 10013` on uvicorn start | Port 8000 still in use | Kill with PowerShell command above |
+| 404 on `/dolan/*` endpoints | Backend not restarted after code changes | Restart uvicorn — Flutter restart is not enough |
+| `CRSError: EPSG code unknown` in notebook | Conda `proj.db` version mismatch | Set `PROJ_DATA` before importing rasterio (handled in cell-setup) |
+| GEE `ValueError: Zone area too large` | Polygon exceeds 700 km² | Draw a smaller polygon |
+| Basins not displaying | Analysis not yet run, or cache missing | Trigger analysis via the fire screen first |
+| Zone analysis stuck at 0% | Backend not restarted after adding zone endpoints | Restart uvicorn |
 
 ---
 
 ## Credits
 
-**Wildcat USGS Toolkit:** v1.1.0
-**Franklin Fire Analysis:** June 2025
-**Debris-Flow Models:**
-- Staley et al. (2017) - Likelihood model
-- Gartner et al. (2014) - Volume model
-- Cannon et al. (2010) - Hazard classification
-
-**Development Team:** Claude Code + User
-**Institution:** USGS Landslide Hazards Program
-
----
-
-## License
-
-This application serves public USGS data. Wildcat toolkit is GPL-3.0 licensed.
-
----
-
-**End of Documentation**
+**Debris-Flow Models:** Staley et al. (2017), Gartner et al. (2014), Cannon et al. (2010)
+**Pre-computed Franklin Fire results:** Wildcat USGS v1.1.0
+**DEM source (GEE mode):** USGS 3DEP 10m (`USGS/3DEP/10m_collection`)
+**Burn severity:** MTBS (Monitoring Trends in Burn Severity)
+**Hydrological processing:** WhiteboxTools (open-source)

@@ -28,3 +28,4 @@ flutter:
   # This tells Flutter to include your assets
   assets:
     - assets/data/
+    - assets/ml_predictions/

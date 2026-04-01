@@ -1,0 +1,4 @@
+fire,sub_basin_id,probability,risk_category,predicted_flow
+PALISADES,PALISADES-22,0.058716,High,1
+PALISADES,PALISADES-26,0.039412,Moderate,0
+PALISADES,PALISADES-31,0.058975,Very High,1

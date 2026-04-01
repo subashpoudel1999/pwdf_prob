@@ -1,0 +1,4 @@
+wildcat 1.1.1 Release Notes
+===========================
+
+This patch relaxes the Python version requirement to any version >=3.11. Previously, ``wildcat`` installations only supported Python 3.11 or 3.12.

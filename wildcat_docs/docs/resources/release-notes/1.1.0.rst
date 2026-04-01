@@ -1,0 +1,27 @@
+wildcat 1.1.0 Release Notes
+===========================
+
+This release allows users to select the CRS of exported files, and to specify alternate configuration files. The release also updates wildcat's backend for compatibility with `pfdf 3+ <https://code.usgs.gov/ghsc/lhp/pfdf>`_.
+
+New Features
+------------
+
+* Added the ``export_crs`` option, which allows users to select the CRS of exported files.
+* Added the ``config`` override, which allows users to select alternate config files instead of the default ``configuration.py``
+* Improved error messages when a dataset does not overlap the buffered fire perimeter
+
+Fixes
+-----
+
+* Fixed a bug that prevented loading data from Geodatabases and other structured folder formats
+* Fixed a DeprecationWarning resulting from bitwise inversion of bools
+
+For Developers
+--------------
+
+* Updated backend for compatibility with pfdf 3+
+* Updated ``pyproject.toml`` to conform to `PEP 508 <https://peps.python.org/pep-0508/>`_ and `poetry 2+ <https://python-poetry.org/>`_
+* Refactored pipeline to remove parallel build matrices
+* Added daily builds to the pipeline
+* Added custom errors to API
+* Switch type hints to use future annotations

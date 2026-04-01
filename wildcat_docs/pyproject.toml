@@ -1,0 +1,194 @@
+[project]
+name = "wildcat"
+version = "1.1.1"
+description = "Command line tool to assess and map post-fire debris-flow hazards"
+license = "GPL-3.0-only"
+readme = "README.md"
+requires-python = ">=3.11,<4"
+authors = [
+    {name = "Jonathan King", email = "jking@usgs.gov"},
+]
+maintainers = [
+    {name = "Jonathan King", email = "jking@usgs.gov"},
+]
+keywords = ["wildfire", "debris flow", "hazard", "usgs", "map", "assessment"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+]
+
+[project.urls]
+repository = "https://code.usgs.gov/ghsc/lhp/wildcat"
+documentation = "https://ghsc.code-pages.usgs.gov/lhp/wildcat"
+
+[project.scripts]
+wildcat = "wildcat._cli:main"
+
+#####
+# Poetry / Dependencies
+#####
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+packages = [
+    { include = "wildcat" },
+]
+
+[[tool.poetry.source]]
+name = "usgs/ghsc/lhp"
+url = "https://code.usgs.gov/api/v4/groups/859/-/packages/pypi/simple"
+priority = "explicit"
+
+[tool.poetry.dependencies]
+pfdf = { version = ">=3.0.0", source = "usgs/ghsc/lhp" }
+numpy = "*"
+fiona = "*"
+rasterio = "*"
+
+[tool.poetry.group.dev]
+optional = true
+
+[tool.poetry.group.dev.dependencies]
+# Dev tasks
+poethepoet = ">=0.40"
+
+# Formatting
+black = ">=26.1"
+isort = ">=7.0"
+
+# Testing
+pip-audit = ">=2.10"
+pytest = ">=9.0"
+pytest-cov = ">=7.0"
+coverage = ">=7.13"
+
+# Deploy
+twine = ">=6.2"
+
+# Docs
+sphinx = ">=8.1"
+furo = ">=2025.12"
+sphinx_design = ">=0.6"
+
+#####
+# Dev tool configurations
+######
+
+[tool.pytest.ini_options]
+filterwarnings = [
+    "ignore::DeprecationWarning:pysheds.sgrid",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "if typing.TYPE_CHECKING",
+]
+omit = [
+    "wildcat/typing/*",
+]
+
+[tool.isort]
+profile = "black"
+
+
+#####
+# Developer Scripts
+#####
+
+##### Utils
+
+[tool.poe.tasks._rmtree]
+help = "Deletes a folder and its contents"
+expr = "shutil.rmtree(sys.argv[1]) if pathlib.Path(sys.argv[1]).exists() else None"
+imports = ["shutil", "pathlib"]
+
+[tool.poe.tasks._delete]
+help = "Deletes a file"
+expr = "pathlib.Path(sys.argv[1]).unlink() if pathlib.Path(sys.argv[1]).exists() else None"
+imports = ["pathlib"]
+
+[tool.poe.tasks._open]
+help = "Opens an HTML index page in a browser"
+expr = "webbrowser.open(pathlib.Path.cwd() / sys.argv[1] / 'index.html')"
+imports = ["webbrowser", "pathlib"]
+
+
+##### Dependencies: Audit, Lock
+
+[tool.poe.tasks.audit]
+help = "Checks package dependencies for security issues"
+cmd = "pip-audit"
+
+[tool.poe.tasks.update]
+help = "Deletes poetry.lock and reinstalls the project"
+sequence = [
+  {ref = "_delete poetry.lock" },
+  {cmd = "poetry install --all-groups --all-extras" },
+]
+
+
+##### Formatting
+
+[tool.poe.tasks.format]
+help = "Applies black and isort to wildcat and its tests"
+sequence = ["isort wildcat", "isort tests", "black wildcat", "black tests"]
+default_item_type = "cmd"
+
+[tool.poe.tasks.lint]
+help = "Requires wildcat and its tests to be properly formatted"
+sequence = [
+  "isort wildcat --check", 
+  "isort tests --check", 
+  "black wildcat --check", 
+  "black tests --check",
+]
+default_item_type = "cmd"
+
+
+##### Testing and test coverage
+
+[tool.poe.tasks.tests]
+help = "Runs the tests and requires 100% coverage"
+sequence = [
+  { cmd = "pytest tests --cov=wildcat --cov=tests --cov-fail-under=100 --cov-report xml:coverage.xml" },
+  { ref = "coverage" },
+]
+
+[tool.poe.tasks.coverage]
+help = "Prints the coverage report for the tests"
+cmd = "coverage report"
+
+[tool.poe.tasks.htmlcov]
+help = "Builds an HTML coverage report and opens in browser"
+sequence = [
+  { ref = "_rmtree htmlcov" },
+  { cmd = "coverage html --skip-covered" },
+  { ref = "_open htmlcov" },
+]
+
+
+##### Docs
+
+[tool.poe.tasks.docs]
+help = "Deletes and then rebuilds the documentation"
+sequence = [
+  { ref = "_rmtree public" },
+  { script = "scripts.docs:add_copyright" },
+  { cmd = "sphinx-build -qa docs public" },
+]
+
+[tool.poe.tasks.open-docs]
+help = "Opens the docs in a webbrowser"
+ref = "_open public"

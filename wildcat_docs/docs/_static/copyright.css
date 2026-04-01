@@ -1,0 +1,14 @@
+/* Removes the copyright text enforced by the read-the-docs theme */
+div[class=copyright] {
+    visibility: hidden;
+    position: relative;
+}
+
+/* The desired attribution text */
+div[class=copyright]:after {
+    visibility: visible;
+    position: absolute;
+    top: 0;
+    left: 0;
+    content: "USGS 2025, Public Domain";
+}

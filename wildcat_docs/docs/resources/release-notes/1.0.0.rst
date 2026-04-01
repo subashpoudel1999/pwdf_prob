@@ -1,0 +1,19 @@
+wildcat 1.0.0 Release Notes
+===========================
+
+This release introduces the 4 core wildcat commands. These are:
+
+.. list-table::
+    :header-rows: 1
+
+    * - Command
+      - Description
+    * - ``initialize``
+      - Initializes a project folder with a default configuration file
+    * - ``preprocess``
+      - Reprojects and cleans input datasets in preparation for an assessment.
+    * - ``assess``
+      - Designs a stream segment network and runs hazard assessment models.
+    * - ``export``
+      - Exports saved assessment results to GIS file formats.
+     
