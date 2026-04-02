@@ -29,7 +29,7 @@ const _kI15Presets = {
   'Intense storm (24/40/60/80 mm/hr)': [24.0, 40.0, 60.0, 80.0],
 };
 
-const _kAccent = Color(0xFF26C6DA);   // distinct teal — different from dolan (00BFA5)
+const _kAccent = Color(0xFF26C6DA);
 
 class WildcatDolanScreen extends StatefulWidget {
   const WildcatDolanScreen({super.key});
@@ -49,7 +49,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
 
   _ScreenState _screenState = _ScreenState.ready;
 
-  // --- Settings state (user-configurable before running) ---
+  // --- Settings ---
   String _i15Preset = 'Standard (16/20/24/40 mm/hr)';
   double _kf = 0.2;
   double _minSlope = 0.12;
@@ -57,7 +57,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
   double _minAreaKm2 = 0.025;
   bool _locateBasins = true;
 
-  // --- Analyze state ---
+  // --- Full analysis state ---
   String? _jobId;
   int _currentStep = 0;
   String _stepMessage = '';
@@ -69,6 +69,21 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
   Map<String, dynamic>? _perimeterGeoJson;
   int? _selectedFeatureIndex;
   bool _useSatellite = true;
+
+  // --- Zone drawing state ---
+  bool _drawingZone = false;
+  List<LatLng> _drawPoints = [];
+
+  // --- Zone analysis state ---
+  String? _zoneJobId;
+  int _zoneStep = 0;
+  int _zoneProgress = 0;
+  String _zoneMessage = '';
+  bool _zoneRunning = false;
+  ParsedGeoJson? _zoneResults;
+  List<LatLng> _zoneBoundary = [];
+  String? _zoneError;
+  Timer? _zonePollTimer;
 
   Timer? _pollTimer;
   late AnimationController _pulseController;
@@ -90,6 +105,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
+    _zonePollTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -104,7 +120,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
   }
 
   // -------------------------------------------------------------------------
-  // Analysis flow
+  // Full analysis flow
   // -------------------------------------------------------------------------
 
   Future<void> _startAnalysis({bool force = false}) async {
@@ -217,6 +233,157 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
   }
 
   // -------------------------------------------------------------------------
+  // Zone drawing helpers
+  // -------------------------------------------------------------------------
+
+  void _startDrawing() {
+    setState(() {
+      _drawingZone = true;
+      _drawPoints = [];
+      _zoneResults = null;
+      _zoneBoundary = [];
+      _zoneError = null;
+      _selectedFeatureIndex = null;
+    });
+  }
+
+  void _cancelDrawing() =>
+      setState(() {
+        _drawingZone = false;
+        _drawPoints = [];
+        _zoneError = null;
+      });
+
+  void _undoPoint() {
+    if (_drawPoints.isNotEmpty) setState(() => _drawPoints.removeLast());
+  }
+
+  void _clearZone() {
+    setState(() {
+      _zoneResults = null;
+      _zoneBoundary = [];
+      _zoneError = null;
+      _zoneJobId = null;
+      _zoneRunning = false;
+      _selectedFeatureIndex = null;
+    });
+    _zonePollTimer?.cancel();
+  }
+
+  Future<void> _confirmZone() async {
+    if (_drawPoints.length < 3) return;
+    final pts = List<LatLng>.from(_drawPoints)..add(_drawPoints.first);
+    final coords = pts.map((p) => [p.longitude, p.latitude]).toList();
+    final polygon = {'type': 'Polygon', 'coordinates': [coords]};
+
+    setState(() {
+      _zoneError = null;
+      _drawingZone = false;
+      _drawPoints = [];
+      _zoneBoundary = pts;
+      _zoneRunning = true;
+      _zoneStep = 0;
+      _zoneProgress = 0;
+      _zoneMessage = 'Clipping DEM and dNBR to drawn zone...';
+      _zoneResults = null;
+    });
+
+    final i15 = _kI15Presets[_i15Preset]!;
+    try {
+      final resp = await http.post(
+        Uri.parse('$_base/wildcat/dolan/analyze-zone'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'polygon': polygon,
+          'settings': {
+            'I15_mm_hr': i15,
+            'kf': _kf,
+            'min_area_km2': _minAreaKm2,
+            'min_slope': _minSlope,
+            'min_burn_ratio': _minBurnRatio,
+            'locate_basins': _locateBasins,
+            'severity_thresholds': [125.0, 250.0, 500.0],
+          },
+        }),
+      );
+      if (resp.statusCode != 200) {
+        setState(() {
+          _zoneRunning = false;
+          _zoneError = 'Backend error: ${resp.body}';
+        });
+        return;
+      }
+      _zoneJobId = json.decode(resp.body)['job_id'] as String;
+      _zonePollTimer?.cancel();
+      _zonePollTimer = Timer.periodic(
+          const Duration(milliseconds: 2000), (_) => _pollZone());
+    } catch (e) {
+      setState(() {
+        _zoneRunning = false;
+        _zoneError = 'Failed to start zone analysis: $e';
+      });
+    }
+  }
+
+  Future<void> _pollZone() async {
+    if (_zoneJobId == null) return;
+    try {
+      final resp = await http
+          .get(Uri.parse('$_base/wildcat/dolan/status/$_zoneJobId'));
+      if (resp.statusCode != 200) return;
+      final data = json.decode(resp.body);
+      final status = data['status'] as String? ?? 'running';
+      if (!mounted) return;
+      if (status == 'completed') {
+        _zonePollTimer?.cancel();
+        setState(() {
+          _zoneStep = 3;
+          _zoneProgress = 100;
+          _zoneMessage = 'Zone analysis complete!';
+        });
+        await _loadZoneResults();
+      } else if (status == 'failed') {
+        _zonePollTimer?.cancel();
+        setState(() {
+          _zoneRunning = false;
+          _zoneError = data['error'] as String? ?? 'Zone analysis failed';
+        });
+      } else {
+        setState(() {
+          _zoneStep = (data['step'] as num?)?.toInt() ?? _zoneStep;
+          _zoneProgress =
+              (data['progress'] as num?)?.toInt() ?? _zoneProgress;
+          _zoneMessage = data['message'] as String? ?? _zoneMessage;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadZoneResults() async {
+    try {
+      final resp = await http
+          .get(Uri.parse('$_base/wildcat/dolan/zone-results/$_zoneJobId'));
+      if (resp.statusCode == 200 && mounted) {
+        setState(() {
+          _zoneResults = parseGeoJson(json.decode(resp.body));
+          _zoneRunning = false;
+          _selectedFeatureIndex = null;
+        });
+      } else {
+        setState(() {
+          _zoneRunning = false;
+          _zoneError = 'Could not load zone results (${resp.statusCode})';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _zoneRunning = false;
+        _zoneError = 'Failed to load zone results: $e';
+      });
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Build
   // -------------------------------------------------------------------------
 
@@ -242,6 +409,23 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
         ]),
         actions: [
           if (_screenState == _ScreenState.results) ...[
+            // Zone controls
+            if (_zoneResults != null)
+              TextButton.icon(
+                onPressed: _clearZone,
+                icon: const Icon(Icons.clear, color: Colors.redAccent),
+                label: const Text('Clear Zone',
+                    style: TextStyle(color: Colors.redAccent)),
+              )
+            else if (!_drawingZone && !_zoneRunning)
+              TextButton.icon(
+                onPressed: _startDrawing,
+                icon: const Icon(Icons.draw, color: Colors.amberAccent),
+                label: const Text('Draw Zone',
+                    style: TextStyle(color: Colors.amberAccent)),
+              ),
+            const SizedBox(width: 4),
+            // Map toggle
             IconButton(
               tooltip:
                   _useSatellite ? 'Switch to Street Map' : 'Switch to Satellite',
@@ -255,10 +439,10 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
               onPressed: () => setState(() {
                 _screenState = _ScreenState.ready;
                 _selectedFeatureIndex = null;
+                _clearZone();
               }),
               icon: const Icon(Icons.refresh, color: _kAccent),
-              label:
-                  const Text('Re-run', style: TextStyle(color: _kAccent)),
+              label: const Text('Re-run', style: TextStyle(color: _kAccent)),
             ),
           ],
         ],
@@ -357,8 +541,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                                     width: 28,
                                     height: 28,
                                     decoration: BoxDecoration(
-                                      color:
-                                          _kAccent.withValues(alpha: 0.12),
+                                      color: _kAccent.withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Icon(_kStepIcons[e.key],
@@ -383,8 +566,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color:
-                                Colors.amber.withValues(alpha: 0.08),
+                            color: Colors.amber.withValues(alpha: 0.08),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                                 color: Colors.amber.withValues(alpha: 0.25)),
@@ -408,7 +590,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                           ),
                         ),
 
-                        // Fixed inputs summary
                         const SizedBox(height: 20),
                         const Text('FIXED INPUTS',
                             style: TextStyle(
@@ -424,7 +605,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                         _inputRow(Icons.crop_square, 'Perimeter',
                             'MTBS burn boundary shapefile'),
 
-                        // ── Analysis parameters ────────────────────────────
                         const SizedBox(height: 24),
                         const Text('ANALYSIS PARAMETERS',
                             style: TextStyle(
@@ -434,7 +614,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                                 letterSpacing: 1.2)),
                         const SizedBox(height: 14),
 
-                        // I15 rainfall intensity preset
                         _settingsLabel(Icons.water, 'Rainfall Intensity (I15)'),
                         const SizedBox(height: 8),
                         ..._kI15Presets.keys.map((label) => Padding(
@@ -454,8 +633,8 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                                     border: Border.all(
                                       color: _i15Preset == label
                                           ? _kAccent.withValues(alpha: 0.5)
-                                          : Colors.white.withValues(
-                                              alpha: 0.08),
+                                          : Colors.white
+                                              .withValues(alpha: 0.08),
                                     ),
                                   ),
                                   child: Row(children: [
@@ -484,7 +663,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
 
                         const SizedBox(height: 14),
 
-                        // Kf soil erodibility
                         _settingsLabel(Icons.water_drop,
                             'Soil Erodibility (Kf)  —  ${_kf.toStringAsFixed(2)}'),
                         SliderTheme(
@@ -494,15 +672,14 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                             min: 0.05,
                             max: 0.50,
                             divisions: 9,
-                            onChanged: (v) =>
-                                setState(() => _kf = double.parse(v.toStringAsFixed(2))),
+                            onChanged: (v) => setState(
+                                () => _kf = double.parse(v.toStringAsFixed(2))),
                           ),
                         ),
                         _sliderLabels('0.05', '0.50', 'erodible'),
 
                         const SizedBox(height: 10),
 
-                        // Min slope filter
                         _settingsLabel(Icons.show_chart,
                             'Min Slope Filter  —  ${_minSlope.toStringAsFixed(2)}'),
                         SliderTheme(
@@ -512,16 +689,14 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                             min: 0.05,
                             max: 0.30,
                             divisions: 10,
-                            onChanged: (v) => setState(
-                                () => _minSlope = double.parse(
-                                    v.toStringAsFixed(2))),
+                            onChanged: (v) => setState(() =>
+                                _minSlope = double.parse(v.toStringAsFixed(2))),
                           ),
                         ),
                         _sliderLabels('0.05', '0.30', 'steeper only'),
 
                         const SizedBox(height: 10),
 
-                        // Min burn ratio
                         _settingsLabel(Icons.local_fire_department,
                             'Min Burn Ratio  —  ${(_minBurnRatio * 100).round()}%'),
                         SliderTheme(
@@ -531,16 +706,14 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                             min: 0.05,
                             max: 0.60,
                             divisions: 11,
-                            onChanged: (v) => setState(
-                                () => _minBurnRatio = double.parse(
-                                    v.toStringAsFixed(2))),
+                            onChanged: (v) => setState(() => _minBurnRatio =
+                                double.parse(v.toStringAsFixed(2))),
                           ),
                         ),
                         _sliderLabels('5%', '60%', 'more burned'),
 
                         const SizedBox(height: 10),
 
-                        // Min basin area
                         _settingsLabel(Icons.crop_free,
                             'Min Basin Area  —  ${_minAreaKm2.toStringAsFixed(3)} km²'),
                         SliderTheme(
@@ -550,17 +723,15 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                             min: 0.010,
                             max: 0.100,
                             divisions: 9,
-                            onChanged: (v) => setState(
-                                () => _minAreaKm2 = double.parse(
-                                    v.toStringAsFixed(3))),
+                            onChanged: (v) => setState(() => _minAreaKm2 =
+                                double.parse(v.toStringAsFixed(3))),
                           ),
                         ),
-                        _sliderLabels('0.010', '0.100 km²',
-                            'fewer/larger basins →'),
+                        _sliderLabels(
+                            '0.010', '0.100 km²', 'fewer/larger basins →'),
 
                         const SizedBox(height: 14),
 
-                        // Locate basins toggle
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 12, vertical: 10),
@@ -588,8 +759,8 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                                         ? 'On — full polygon map (slower)'
                                         : 'Off — segment lines only (faster)',
                                     style: TextStyle(
-                                        color: Colors.white
-                                            .withValues(alpha: 0.4),
+                                        color:
+                                            Colors.white.withValues(alpha: 0.4),
                                         fontSize: 11),
                                   ),
                                 ],
@@ -623,7 +794,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                   ),
                 ),
 
-                // Run button
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: SizedBox(
@@ -649,7 +819,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
           ),
         ),
 
-        // Right: map preview with perimeter
         Expanded(child: _buildPerimeterMap()),
       ],
     );
@@ -693,33 +862,30 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
       );
 
-  Widget _inputRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: Colors.white38, size: 14),
-          const SizedBox(width: 8),
-          Text('$label: ',
-              style: const TextStyle(
-                  color: Colors.white54,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
-          Expanded(
-              child: Text(value,
-                  style: const TextStyle(
-                      color: Colors.white38, fontSize: 12))),
-        ],
-      ),
-    );
-  }
+  Widget _inputRow(IconData icon, String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: Colors.white38, size: 14),
+            const SizedBox(width: 8),
+            Text('$label: ',
+                style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            Expanded(
+                child: Text(value,
+                    style: const TextStyle(
+                        color: Colors.white38, fontSize: 12))),
+          ],
+        ),
+      );
 
   Widget _buildPerimeterMap() {
     final perimLayers = <Polygon>[];
     if (_perimeterGeoJson != null) {
-      final features =
-          (_perimeterGeoJson!['features'] as List?) ?? [];
+      final features = (_perimeterGeoJson!['features'] as List?) ?? [];
       for (final f in features) {
         final geom = f['geometry'] as Map<String, dynamic>?;
         if (geom == null) continue;
@@ -734,8 +900,8 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
               ? ring[0] as List
               : <dynamic>[];
           final pts = outer
-              .map((c) => LatLng((c[1] as num).toDouble(),
-                  (c[0] as num).toDouble()))
+              .map((c) =>
+                  LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
               .toList();
           if (pts.isNotEmpty) {
             perimLayers.add(Polygon(
@@ -750,7 +916,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
     }
     return FlutterMap(
       mapController: _mapController,
-      options: MapOptions(
+      options: const MapOptions(
         initialCenter: _dolanCenter,
         initialZoom: 10,
       ),
@@ -768,7 +934,7 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
   // -------------------------------------------------------------------------
   // Analyzing screen
   // -------------------------------------------------------------------------
-  
+
   Widget _buildAnalyzing() {
     final stepIdx = (_currentStep - 1).clamp(0, _kSteps.length - 1);
     return Center(
@@ -778,7 +944,6 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Pulse icon
             AnimatedBuilder(
               animation: _pulseAnim,
               builder: (_, __) => Opacity(
@@ -805,15 +970,14 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                 style: TextStyle(color: _kAccent, fontSize: 13)),
             const SizedBox(height: 32),
 
-            // Step cards
             ...List.generate(_kSteps.length, (i) {
               final done = i < _currentStep - 1;
               final active = i == stepIdx && _currentStep > 0;
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 margin: const EdgeInsets.only(bottom: 10),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 decoration: BoxDecoration(
                   color: active
                       ? _kAccent.withValues(alpha: 0.1)
@@ -867,22 +1031,18 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
             }),
 
             const SizedBox(height: 24),
-
-            // Progress bar
             ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
                 value: _progress / 100.0,
                 backgroundColor: Colors.white12,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(_kAccent),
+                valueColor: const AlwaysStoppedAnimation<Color>(_kAccent),
                 minHeight: 6,
               ),
             ),
             const SizedBox(height: 12),
             Text('$_progress%  —  $_stepMessage',
-                style: const TextStyle(
-                    color: Colors.white54, fontSize: 12),
+                style: const TextStyle(color: Colors.white54, fontSize: 12),
                 textAlign: TextAlign.center),
           ],
         ),
@@ -896,58 +1056,90 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
 
   Widget _buildResults() {
     if (_results == null) return const Center(child: CircularProgressIndicator());
-    final polygons = buildPolygons(
+
+    final hasZone = _zoneResults != null;
+
+    // Full basins — dimmed when zone is active (tap handled via MapOptions.onTap)
+    final fullPolygons = buildPolygons(
       features: _results!.features,
-      selectedIndex: _selectedFeatureIndex,
+      selectedIndex: hasZone ? null : _selectedFeatureIndex,
       onTap: (i) => setState(() => _selectedFeatureIndex = i),
+      dimmed: hasZone,
     );
-    final perimPolygons = <Polygon>[];
-    if (_perimeterGeoJson != null) {
-      final pf =
-          (_perimeterGeoJson!['features'] as List?) ?? [];
-      for (final f in pf) {
-        final geom = f['geometry'] as Map<String, dynamic>?;
-        if (geom == null) continue;
-        final type = geom['type'] as String? ?? '';
-        final coordsList = type == 'Polygon'
-            ? [geom['coordinates'] as List]
-            : type == 'MultiPolygon'
-                ? (geom['coordinates'] as List)
-                : <dynamic>[];
-        for (final ring in coordsList) {
-          final outer =
-              (ring is List && ring.isNotEmpty) ? ring[0] as List : <dynamic>[];
-          final pts = outer
-              .map((c) => LatLng((c[1] as num).toDouble(),
-                  (c[0] as num).toDouble()))
-              .toList();
-          if (pts.isNotEmpty) {
-            perimPolygons.add(Polygon(
-              points: pts,
+
+    // Zone basins — full opacity, on top
+    final zonePolygons = hasZone
+        ? buildPolygons(
+            features: _zoneResults!.features,
+            selectedIndex: _selectedFeatureIndex,
+            onTap: (i) => setState(() => _selectedFeatureIndex = i),
+          )
+        : <Polygon>[];
+
+    // Fire perimeter outline
+    final perimPolygons = _buildPerimeterPolygons();
+
+    // Zone drawing in-progress polygon
+    final drawPolygons = _drawPoints.length >= 2
+        ? [
+            Polygon(
+              points: [..._drawPoints, _drawPoints.first],
+              color: Colors.amberAccent.withValues(alpha: 0.15),
+              borderColor: Colors.amberAccent,
+              borderStrokeWidth: 2,
+            )
+          ]
+        : <Polygon>[];
+
+    // Completed zone boundary outline
+    final zoneBoundaryPolygons = _zoneBoundary.length >= 3
+        ? [
+            Polygon(
+              points: _zoneBoundary,
               color: Colors.transparent,
-              borderColor: Colors.orangeAccent,
-              borderStrokeWidth: 1.5,
-            ));
-          }
-        }
-      }
-    }
+              borderColor: Colors.white,
+              borderStrokeWidth: 2.5,
+            )
+          ]
+        : <Polygon>[];
+
+    // Draw-mode markers
+    final drawMarkers = _drawPoints
+        .map((p) => Marker(
+              point: p,
+              width: 10,
+              height: 10,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.amberAccent,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 1.5),
+                ),
+              ),
+            ))
+        .toList();
 
     return Stack(
       children: [
-        // Map
+        // ── Map ──────────────────────────────────────────────────────────────
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
             initialCenter: _dolanCenter,
             initialZoom: 10,
             onTap: (tapPos, latLng) {
-              // Basin tap selection via ray-casting
+              if (_drawingZone) {
+                setState(() => _drawPoints.add(latLng));
+                return;
+              }
+              // Basin tap via ray-casting
+              final feats = hasZone
+                  ? _zoneResults!.features
+                  : _results!.features;
               int? hit;
-              for (int i = 0; i < _results!.features.length; i++) {
-                final pts = _results!.features[i].rings[0];
-                if (pts.isEmpty) continue;
-                if (_pointInPolygon(latLng, pts)) {
+              for (int i = 0; i < feats.length; i++) {
+                if (feats[i].rings.isEmpty) continue;
+                if (_pointInPolygon(latLng, feats[i].rings[0])) {
                   hit = i;
                   break;
                 }
@@ -962,19 +1154,22 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
                   : 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
               userAgentPackageName: 'com.example.fire_webapp',
             ),
-            PolygonLayer(polygons: polygons),
-            if (perimPolygons.isNotEmpty)
-              PolygonLayer(polygons: perimPolygons),
+            PolygonLayer(polygons: fullPolygons),
+            if (zonePolygons.isNotEmpty) PolygonLayer(polygons: zonePolygons),
+            if (perimPolygons.isNotEmpty) PolygonLayer(polygons: perimPolygons),
+            if (zoneBoundaryPolygons.isNotEmpty)
+              PolygonLayer(polygons: zoneBoundaryPolygons),
+            if (drawPolygons.isNotEmpty) PolygonLayer(polygons: drawPolygons),
+            if (drawMarkers.isNotEmpty) MarkerLayer(markers: drawMarkers),
           ],
         ),
 
-        // Wildcat badge
+        // ── Top-left badge ────────────────────────────────────────────────────
         Positioned(
           top: 12,
           left: 12,
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
               color: const Color(0xCC0A2030),
               borderRadius: BorderRadius.circular(20),
@@ -985,56 +1180,232 @@ class _WildcatDolanScreenState extends State<WildcatDolanScreen>
               children: [
                 const Icon(Icons.verified, color: _kAccent, size: 13),
                 const SizedBox(width: 5),
-                const Text('Real Wildcat (pfdf)',
-                    style: TextStyle(
-                        color: _kAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  _drawingZone
+                      ? 'Drawing Zone — ${_drawPoints.length} pts'
+                      : hasZone
+                          ? 'Zone: ${_zoneResults!.features.length} basins  |  Full: ${_results!.features.length}'
+                          : 'Real Wildcat (pfdf)  |  ${_results!.features.length} basins',
+                  style: const TextStyle(
+                      color: _kAccent, fontSize: 11, fontWeight: FontWeight.w600),
+                ),
               ],
             ),
           ),
         ),
 
-        // Basin count badge
-        Positioned(
-          top: 12,
-          right: 12,
-          child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xCC0A2030),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              '${_results!.features.length} basins',
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ),
-        ),
-
-        // Hazard legend
+        // ── Hazard legend ─────────────────────────────────────────────────────
         Positioned(
           bottom: 24,
           left: 12,
           child: _buildLegend(),
         ),
 
-        // Attribute panel
-        if (_selectedFeatureIndex != null)
+        // ── Drawing toolbar ───────────────────────────────────────────────────
+        if (_drawingZone)
           Positioned(
-            top: 0,
-            right: 0,
-            bottom: 0,
-            width: 320,
-            child: AttributePanel(
-              feature: _results!.features[_selectedFeatureIndex!],
-              onClose: () =>
-                  setState(() => _selectedFeatureIndex = null),
+            bottom: 24,
+            right: 12,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (_drawPoints.length >= 3)
+                  ElevatedButton.icon(
+                    onPressed: _confirmZone,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _kAccent,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8)),
+                    ),
+                    icon: const Icon(Icons.check, size: 16),
+                    label: const Text('Run Zone Wildcat',
+                        style: TextStyle(fontSize: 12)),
+                  ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    OutlinedButton.icon(
+                      onPressed:
+                          _drawPoints.isNotEmpty ? _undoPoint : null,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.white54,
+                        side: const BorderSide(color: Colors.white24),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.undo, size: 14),
+                      label: const Text('Undo',
+                          style: TextStyle(fontSize: 12)),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      onPressed: _cancelDrawing,
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.redAccent,
+                        side: const BorderSide(color: Colors.redAccent),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.close, size: 14),
+                      label: const Text('Cancel',
+                          style: TextStyle(fontSize: 12)),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
+
+        // ── Zone running overlay ──────────────────────────────────────────────
+        if (_zoneRunning)
+          Positioned(
+            bottom: 24,
+            right: 12,
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 300),
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xDD0A2030),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: _kAccent.withValues(alpha: 0.4)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: _kAccent)),
+                      const SizedBox(width: 8),
+                      const Text('Zone Analysis Running',
+                          style: TextStyle(
+                              color: _kAccent,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Step $_zoneStep/3  ·  $_zoneProgress%',
+                    style: const TextStyle(
+                        color: Colors.white54, fontSize: 11),
+                  ),
+                  const SizedBox(height: 6),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: _zoneProgress / 100.0,
+                      backgroundColor: Colors.white12,
+                      valueColor:
+                          const AlwaysStoppedAnimation<Color>(_kAccent),
+                      minHeight: 4,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _zoneMessage,
+                    style:
+                        const TextStyle(color: Colors.white38, fontSize: 10),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // ── Zone error ────────────────────────────────────────────────────────
+        if (_zoneError != null)
+          Positioned(
+            bottom: 24,
+            right: 12,
+            child: GestureDetector(
+              onTap: () => setState(() => _zoneError = null),
+              child: Container(
+                constraints: const BoxConstraints(maxWidth: 280),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.5)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.redAccent, size: 14),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(_zoneError!,
+                          style: const TextStyle(
+                              color: Colors.redAccent, fontSize: 11)),
+                    ),
+                    const Icon(Icons.close,
+                        color: Colors.redAccent, size: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+        // ── Attribute panel ───────────────────────────────────────────────────
+        if (_selectedFeatureIndex != null) ...[
+          () {
+            final feats =
+                hasZone ? _zoneResults!.features : _results!.features;
+            if (_selectedFeatureIndex! >= feats.length) return const SizedBox();
+            return Positioned(
+              top: 0,
+              right: 0,
+              bottom: 0,
+              width: 320,
+              child: AttributePanel(
+                feature: feats[_selectedFeatureIndex!],
+                onClose: () =>
+                    setState(() => _selectedFeatureIndex = null),
+              ),
+            );
+          }(),
+        ],
       ],
     );
+  }
+
+  List<Polygon> _buildPerimeterPolygons() {
+    if (_perimeterGeoJson == null) return [];
+    final result = <Polygon>[];
+    final pf = (_perimeterGeoJson!['features'] as List?) ?? [];
+    for (final f in pf) {
+      final geom = f['geometry'] as Map<String, dynamic>?;
+      if (geom == null) continue;
+      final type = geom['type'] as String? ?? '';
+      final coordsList = type == 'Polygon'
+          ? [geom['coordinates'] as List]
+          : type == 'MultiPolygon'
+              ? (geom['coordinates'] as List)
+              : <dynamic>[];
+      for (final ring in coordsList) {
+        final outer =
+            (ring is List && ring.isNotEmpty) ? ring[0] as List : <dynamic>[];
+        final pts = outer
+            .map((c) =>
+                LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+            .toList();
+        if (pts.isNotEmpty) {
+          result.add(Polygon(
+            points: pts,
+            color: Colors.transparent,
+            borderColor: Colors.orangeAccent,
+            borderStrokeWidth: 1.5,
+          ));
+        }
+      }
+    }
+    return result;
   }
 
   Widget _buildLegend() {

@@ -267,6 +267,212 @@ class DolanWildcatService:
 
         self._update(job_id, 3, "Step 3/3 — Done", 98)
 
+    # ── zone analysis ─────────────────────────────────────────────────────────
+
+    def start_zone_analysis(
+        self,
+        polygon: Dict[str, Any],
+        settings: "WildcatSettings" = None,
+    ) -> Dict[str, Any]:
+        """Clip DEM + dNBR to a user-drawn polygon and run real Wildcat on it."""
+        if settings is None:
+            settings = WildcatSettings()
+        job_id = "zone_" + str(uuid.uuid4())[:8]
+        _jobs[job_id] = {
+            "status": "running",
+            "step": 0,
+            "message": "Starting zone analysis...",
+            "progress": 0,
+            "error": None,
+        }
+        t = threading.Thread(
+            target=self._run_zone, args=(job_id, polygon, settings), daemon=True
+        )
+        t.start()
+        return {"job_id": job_id}
+
+    def get_zone_results(self, job_id: str) -> Dict[str, Any]:
+        path = CACHE_DIR / f"zone_{job_id}.geojson"
+        if not path.exists():
+            raise FileNotFoundError(
+                f"Zone results for job {job_id} not found — analysis may still be running."
+            )
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+
+    def _run_zone(
+        self, job_id: str, polygon: Dict[str, Any], settings: "WildcatSettings"
+    ):
+        tmpdir = tempfile.mkdtemp(prefix="wildcat_zone_")
+        clipped_inputs = Path(tmpdir) / "zone_inputs"
+        # wildcat.initialize requires an EMPTY folder — use a separate subdirectory
+        wc_project = Path(tmpdir) / "wc_project"
+        clipped_inputs.mkdir()
+        wc_project.mkdir()
+        try:
+            # --- Step 1: clip rasters ---
+            self._update(
+                job_id, 1, "Step 1/3 — Clipping DEM and dNBR to drawn zone...", 5
+            )
+            self._clip_inputs_to_polygon(polygon, clipped_inputs)
+            self._update(job_id, 1, "Step 1/3 — Inputs clipped", 18)
+
+            # --- Step 2: preprocess ---
+            self._update(
+                job_id, 2,
+                "Step 2/3 — wildcat.preprocess: conditioning clipped DEM, "
+                "estimating burn severity...",
+                20,
+            )
+            import wildcat
+
+            wildcat.initialize(project=str(wc_project), config="empty", inputs=None)
+            wildcat.preprocess(
+                project=str(wc_project),
+                inputs=str(clipped_inputs),
+                perimeter="zone_perimeter.shp",
+                dem="zone_dem.tif",
+                dnbr="zone_dnbr.tif",
+                kf=settings.kf,
+                buffer_km=0.5,           # smaller buffer for zone sub-area
+                severity_thresholds=list(settings.severity_thresholds),
+                estimate_severity=True,
+                constrain_dnbr=True,
+                missing_kf_check="warn",
+            )
+            self._update(job_id, 2, "Step 2/3 — Preprocessing complete", 45)
+
+            # --- Step 3: assess ---
+            self._update(
+                job_id, 3,
+                "Step 3/3 — wildcat.assess: D8 flow routing, network delineation, "
+                "Staley M1 / Gartner G14 / Cannon C10 models...",
+                48,
+            )
+            wildcat.assess(
+                project=str(wc_project),
+                min_area_km2=settings.min_area_km2,
+                min_slope=settings.min_slope,
+                min_burn_ratio=settings.min_burn_ratio,
+                I15_mm_hr=list(settings.I15_mm_hr),
+                volume_CI=[0.95],
+                durations=[15, 30, 60],
+                probabilities=[0.5, 0.75],
+                locate_basins=settings.locate_basins,
+                parallelize_basins=False,
+            )
+            self._update(job_id, 3, "Step 3/3 — Assessment complete, saving...", 90)
+
+            # --- cache result ---
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            assessment_dir = wc_project / "assessment"
+            src = assessment_dir / "basins.geojson"
+            if not src.exists():
+                src = assessment_dir / "segments.geojson"
+            if not src.exists():
+                raise FileNotFoundError(
+                    "wildcat.assess produced no output for this zone. "
+                    "The drawn area may be too small or have insufficient burned area."
+                )
+            shutil.copy2(src, CACHE_DIR / f"zone_{job_id}.geojson")
+
+            _jobs[job_id].update({
+                "status": "completed",
+                "step": 3,
+                "message": "Zone analysis complete!",
+                "progress": 100,
+            })
+        except Exception as exc:
+            import traceback
+            _jobs[job_id].update({
+                "status": "failed",
+                "error": str(exc),
+                "message": f"Zone analysis failed: {exc}",
+            })
+            log.error(traceback.format_exc())
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
+    def _clip_inputs_to_polygon(
+        self, polygon: Dict[str, Any], out_dir: Path
+    ):
+        """Clip DEM and dNBR to drawn polygon + 200 m buffer; write perimeter SHP."""
+        import rasterio
+        from rasterio.mask import mask as rio_mask
+        import geopandas as gpd
+        from shapely.geometry import shape, mapping
+
+        geom = shape(polygon)
+        gdf = gpd.GeoDataFrame(geometry=[geom], crs="EPSG:4326")
+
+        # Buffer 200 m in UTM, then reproject back to WGS-84
+        utm_epsg = self._utm_epsg(geom.centroid.y, geom.centroid.x)
+        buf_geom = (
+            gdf.to_crs(epsg=utm_epsg)
+            .geometry.buffer(200)
+            .to_crs(epsg=4326)
+            .iloc[0]
+        )
+
+        # Perimeter SHP — the original un-buffered polygon
+        gpd.GeoDataFrame(geometry=[geom], crs="EPSG:4326").to_file(
+            str(out_dir / "zone_perimeter.shp")
+        )
+
+        buf_shapes_wgs84 = [mapping(buf_geom)]
+
+        # Clip DEM (already WGS-84 or native CRS handled by rasterio mask)
+        dem_src = WILDCAT_INPUTS / "dolan_dem_3dep10m.tif"
+        with rasterio.open(str(dem_src)) as src:
+            shapes_for_dem = self._reproject_shapes(
+                buf_shapes_wgs84, "EPSG:4326", str(src.crs)
+            )
+            out_img, out_transform = rio_mask(src, shapes_for_dem, crop=True)
+            out_meta = src.meta.copy()
+            out_meta.update({
+                "height": out_img.shape[1],
+                "width":  out_img.shape[2],
+                "transform": out_transform,
+            })
+        with rasterio.open(str(out_dir / "zone_dem.tif"), "w", **out_meta) as dst:
+            dst.write(out_img)
+
+        # Clip dNBR
+        dnbr_src = WILDCAT_INPUTS / "dolan_dnbr.tif"
+        with rasterio.open(str(dnbr_src)) as src:
+            shapes_for_dnbr = self._reproject_shapes(
+                buf_shapes_wgs84, "EPSG:4326", str(src.crs)
+            )
+            out_img, out_transform = rio_mask(src, shapes_for_dnbr, crop=True)
+            out_meta = src.meta.copy()
+            out_meta.update({
+                "height": out_img.shape[1],
+                "width":  out_img.shape[2],
+                "transform": out_transform,
+            })
+        with rasterio.open(str(out_dir / "zone_dnbr.tif"), "w", **out_meta) as dst:
+            dst.write(out_img)
+
+    @staticmethod
+    def _reproject_shapes(
+        shapes_wgs84: List[Dict], src_crs: str, dst_crs: str
+    ) -> List[Dict]:
+        """Reproject a list of GeoJSON-dict shapes from src_crs to dst_crs."""
+        if src_crs == dst_crs:
+            return shapes_wgs84
+        import geopandas as gpd
+        from shapely.geometry import shape, mapping
+        geoms = [shape(s) for s in shapes_wgs84]
+        gdf = gpd.GeoDataFrame(geometry=geoms, crs=src_crs)
+        return [mapping(g) for g in gdf.to_crs(dst_crs).geometry]
+
+    @staticmethod
+    def _utm_epsg(lat: float, lon: float) -> int:
+        zone = int((lon + 180) / 6) + 1
+        return 32600 + zone if lat >= 0 else 32700 + zone
+
+    # ── helpers ────────────────────────────────────────────────────────────────
+
     def _count_cached_basins(self) -> int:
         p = CACHE_DIR / "basins.geojson"
         if not p.exists():

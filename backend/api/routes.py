@@ -178,6 +178,11 @@ class WildcatDolanAnalyzeRequest(BaseModel):
     settings: WildcatSettings = WildcatSettings()
 
 
+class WildcatZoneRequest(BaseModel):
+    polygon: Dict[str, Any]
+    settings: WildcatSettings = WildcatSettings()
+
+
 @router.get("/wildcat/dolan/perimeter")
 def get_wildcat_dolan_perimeter():
     try:
@@ -207,6 +212,39 @@ def get_wildcat_dolan_status(job_id: str):
 def get_wildcat_dolan_results():
     try:
         return dolan_wildcat_service.get_results()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/wildcat/dolan/analyze-zone")
+def start_wildcat_dolan_zone(request: WildcatZoneRequest):
+    """
+    Clip DEM + dNBR to a user-drawn polygon + 200 m buffer and run the full
+    real Wildcat pipeline on the sub-area.  Returns a job_id for polling via
+    GET /wildcat/dolan/status/{job_id}.  Results fetched via
+    GET /wildcat/dolan/zone-results/{job_id}.
+    """
+    try:
+        if not request.polygon or request.polygon.get("type") != "Polygon":
+            raise HTTPException(
+                status_code=400, detail="Invalid polygon. Must be GeoJSON Polygon geometry."
+            )
+        return dolan_wildcat_service.start_zone_analysis(
+            polygon=request.polygon, settings=request.settings
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/wildcat/dolan/zone-results/{job_id}")
+def get_wildcat_dolan_zone_results(job_id: str):
+    """Fetch results for a completed Wildcat zone analysis job."""
+    try:
+        return dolan_wildcat_service.get_zone_results(job_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
