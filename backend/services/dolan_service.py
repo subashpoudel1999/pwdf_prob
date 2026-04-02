@@ -66,12 +66,10 @@ class _GeoJsonEncoder(json.JSONEncoder):
 
 
 # --- WhiteboxTools path ---
-# If WBT_DIR env var is set, use that local binary (dev/offline).
-# Otherwise rely on the pip-installed `whitebox` package which bundles its own binary.
+# Imported lazily inside _wbt() so the app can start even without WBT installed.
 _wbt_dir_env = os.getenv("WBT_DIR")
 if _wbt_dir_env:
     sys.path.insert(0, _wbt_dir_env)
-from whitebox_tools import WhiteboxTools  # noqa: E402
 
 # --- Dolan Fire input data ---
 _WEBAPP_ROOT = Path(__file__).parent.parent.parent   # fire_webapp/
@@ -869,8 +867,10 @@ class DolanService:
         with open(zone_path, "w") as f:
             json.dump(result, f, cls=_GeoJsonEncoder)
 
-    def _wbt(self) -> "WhiteboxTools":
+    def _wbt(self):
+        from whitebox_tools import WhiteboxTools
         wbt = WhiteboxTools()
-        wbt.exe_path = str(WBT_DIR)
+        if _wbt_dir_env:
+            wbt.exe_path = _wbt_dir_env
         wbt.verbose = False
         return wbt
