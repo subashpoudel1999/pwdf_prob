@@ -1,8 +1,3 @@
-import 'dart:js_interop';
-
-@JS('window.location.protocol')
-external String get _pageProtocol;
-
 class AppConfig {
   /// Backend API base URL.
   ///
@@ -17,11 +12,11 @@ class AppConfig {
     const compiled = String.fromEnvironment('BACKEND_URL', defaultValue: '');
     if (compiled.isNotEmpty) return compiled;
 
-    try {
-      final scheme = _pageProtocol == 'https:' ? 'https' : 'http';
-      return '$scheme://localhost:8000/api/v1';
-    } catch (_) {
-      return 'http://localhost:8000/api/v1';
-    }
+    // Always use plain HTTP for the local backend.
+    // Chrome treats localhost as a "potentially trustworthy" origin, so
+    // http://localhost requests are allowed even from an https:// page —
+    // no mixed-content block applies.  Mirroring the page scheme (https →
+    // https://localhost:8000) would fail because uvicorn runs plain HTTP.
+    return 'http://localhost:8000/api/v1';
   }
 }
