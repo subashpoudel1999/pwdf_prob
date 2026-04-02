@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: wildfire-backend
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    plan: free
+    envVars:
+      - key: ML_DIR
+        value: /opt/ml
+      - key: WBT_WORK_DIR
+        value: /tmp/wbt
+      - key: WBT_EXE
+        value: /usr/local/bin/whitebox_tools
+    healthCheckPath: /health

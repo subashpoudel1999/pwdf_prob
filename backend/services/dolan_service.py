@@ -27,6 +27,7 @@ Pipeline (10 steps — identical to Palisades):
 """
 
 import json
+import os
 import sys
 import tempfile
 import datetime
@@ -65,8 +66,11 @@ class _GeoJsonEncoder(json.JSONEncoder):
 
 
 # --- WhiteboxTools path ---
-WBT_DIR = Path(r"C:\Users\J01040445\Downloads\1. Wildfire folders\WBT")
-sys.path.insert(0, str(WBT_DIR))
+# If WBT_DIR env var is set, use that local binary (dev/offline).
+# Otherwise rely on the pip-installed `whitebox` package which bundles its own binary.
+_wbt_dir_env = os.getenv("WBT_DIR")
+if _wbt_dir_env:
+    sys.path.insert(0, _wbt_dir_env)
 from whitebox_tools import WhiteboxTools  # noqa: E402
 
 # --- Dolan Fire input data ---

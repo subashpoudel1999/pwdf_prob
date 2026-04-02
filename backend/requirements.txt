@@ -1,5 +1,36 @@
+# Web framework
 fastapi==0.115.0
 uvicorn[standard]==0.30.0
 pydantic==2.8.0
 python-multipart==0.0.9
+
+# Image processing
 Pillow>=10.0.0
+
+# Numerical / data
+numpy>=1.26.0
+pandas>=2.2.0
+scipy>=1.13.0
+
+# Geospatial (binary wheels bundle GDAL — no system install needed)
+rasterio>=1.3.10
+geopandas>=0.14.4
+shapely>=2.0.4
+pyproj>=3.6.1
+fiona>=1.9.6
+
+# ML
+scikit-learn>=1.5.0
+joblib>=1.4.0
+
+# Visualization
+matplotlib>=3.9.0
+
+# HTTP
+requests>=2.32.0
+
+# WhiteboxTools Python wrapper (downloads WBT binary automatically)
+whitebox>=2.3.4
+
+# Google Earth Engine (required for `import ee` at module load — credentials handled separately)
+earthengine-api>=0.1.400

@@ -35,6 +35,7 @@ import time
 import urllib.request
 import uuid
 import warnings
+import os
 import zipfile
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -50,11 +51,11 @@ import requests
 warnings.filterwarnings("ignore")
 
 # ── Path constants ────────────────────────────────────────────────────────────
-_ML_DIR      = Path(r"C:\Users\J01040445\Downloads\1. Wildfire folders\c_dolan_ml_model")
+_ML_DIR      = Path(os.getenv("ML_DIR", "/opt/ml"))
 _PERIM_SHP   = _ML_DIR / "data" / "perimeter" / "fire_perimeter.shp"
 _BASINS_SHP  = _ML_DIR / "outputs" / "basins"   / "dolan_basins.shp"
-_WBT_DIR     = Path(r"C:\wbt_dolan")
-_WBT_EXE     = Path(r"C:\Users\J01040445\Downloads\1. Wildfire folders\WBT") / "whitebox_tools.exe"
+_WBT_DIR     = Path(os.getenv("WBT_WORK_DIR", "/tmp/wbt"))
+_WBT_EXE     = Path(os.getenv("WBT_EXE", "/usr/local/bin/whitebox_tools"))
 _OUT_DIR     = _ML_DIR / "outputs" / "features"
 _MODEL_PKL   = _ML_DIR / "outputs" / "models"   / "rf_model_v3.pkl"
 _META_PKL    = _ML_DIR / "outputs" / "models"   / "rf_model_v3_meta.pkl"

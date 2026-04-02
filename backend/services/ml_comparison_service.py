@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -38,7 +39,7 @@ import pandas as pd
 _BACKEND_DIR   = Path(__file__).parent.parent
 _WILDCAT_CACHE = _BACKEND_DIR / "data" / "dolan_wildcat_cache" / "basins.geojson"
 
-_ML_DIR        = Path(r"C:\Users\J01040445\Downloads\1. Wildfire folders\c_dolan_ml_model")
+_ML_DIR        = Path(os.getenv("ML_DIR", "/opt/ml"))
 _MODEL_PKL     = _ML_DIR / "outputs" / "models" / "rf_model_v3.pkl"
 _META_PKL      = _ML_DIR / "outputs" / "models" / "rf_model_v3_meta.pkl"
 _LIVE_FEAT_CSV = _ML_DIR / "outputs" / "features" / "dolan_basins_features_live.csv"
