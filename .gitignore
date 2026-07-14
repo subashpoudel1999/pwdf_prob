@@ -1,0 +1,60 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Python backend
+assets/backend/.venv/
+assets/backend/__pycache__/
+assets/backend/**/__pycache__/
+assets/backend/.env
+backend.log
+
+# Wildcat package build artifacts
+assets/wildcat/wildcat/__pycache__/
+
+# Large ASBPA intermediate/raw files not used by the deployed backend.
+assets/asbpa_data/a7_vertical_land_motion/California_LLVS.txt
+assets/asbpa_data/a8_post_wildfire_debris_flow/combined_wildfire_debris_flow.shp
+assets/asbpa_data/a4_annual_high_tide_flood_days/processed_shoreline_flood_days.geojson

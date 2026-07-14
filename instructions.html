@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Running the Wildcat x MHRI Fusion App — Instructions for Dr. Nawa Raj Pradhan</title>
+<style>
+  :root{
+    --bg:#0a0c10; --panel:#11141a; --panel2:#161a22; --border:#232936;
+    --text:#e8edf4; --muted:#93a0b4; --accent:#26c6da; --accent2:#7c4dff;
+    --good:#3ddc84; --warn:#ffb84d; --bad:#ff6e6e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+    background:linear-gradient(180deg,#0a0c10 0%,#0d1118 100%); color:var(--text);
+    line-height:1.65;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:0 24px 80px;}
+  header.hero{
+    padding:56px 24px 40px; text-align:center; position:relative; overflow:hidden;
+    background:radial-gradient(ellipse at top, rgba(38,198,218,0.18), transparent 60%);
+    border-bottom:1px solid var(--border);
+  }
+  .logos{display:flex; justify-content:center; gap:18px; margin-bottom:22px;}
+  .logo-chip{
+    width:56px; height:56px; border-radius:14px; display:flex; align-items:center;
+    justify-content:center; background:var(--panel); border:1px solid var(--border);
+    box-shadow:0 8px 24px rgba(0,0,0,0.35);
+  }
+  header.hero h1{
+    font-size:30px; margin:0 0 10px; font-weight:800; letter-spacing:-0.5px;
+    background:linear-gradient(90deg,#26c6da,#7c4dff); -webkit-background-clip:text;
+    background-clip:text; -webkit-text-fill-color:transparent;
+  }
+  header.hero p.sub{color:var(--muted); font-size:15.5px; max-width:640px; margin:0 auto;}
+  .badge-row{display:flex; gap:8px; justify-content:center; margin-top:18px; flex-wrap:wrap;}
+  .badge{
+    font-family:monospace; font-size:11px; letter-spacing:0.6px; color:var(--accent);
+    border:1px solid rgba(38,198,218,0.4); background:rgba(38,198,218,0.1);
+    padding:5px 10px; border-radius:6px;
+  }
+  .greeting{
+    margin:36px 0 28px; padding:20px 22px; background:var(--panel); border:1px solid var(--border);
+    border-radius:14px; font-size:15.5px;
+  }
+  .greeting b{color:var(--accent);}
+  h2.section-title{
+    display:flex; align-items:center; gap:12px; font-size:13px; letter-spacing:1.6px;
+    text-transform:uppercase; color:var(--muted); margin:48px 0 18px; font-weight:700;
+  }
+  h2.section-title::after{content:""; flex:1; height:1px; background:var(--border);}
+  .step{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px;
+    padding:24px 26px; margin-bottom:18px; position:relative;
+  }
+  .step-head{display:flex; align-items:center; gap:14px; margin-bottom:12px;}
+  .step-num{
+    flex:0 0 auto; width:34px; height:34px; border-radius:10px; background:rgba(38,198,218,0.14);
+    border:1px solid rgba(38,198,218,0.4); color:var(--accent); font-weight:800; font-size:14px;
+    display:flex; align-items:center; justify-content:center; font-family:monospace;
+  }
+  .step h3{margin:0; font-size:18px; font-weight:700;}
+  .step p{color:#c4cdda; margin:8px 0 10px; font-size:14.5px;}
+  .step .why{
+    font-size:13px; color:var(--muted); background:var(--panel2); border-left:3px solid var(--accent2);
+    padding:10px 14px; border-radius:8px; margin:12px 0;
+  }
+  .step .why b{color:#b9a6ff;}
+  code, pre{
+    font-family:'Cascadia Code',Consolas,monospace; font-size:13px;
+  }
+  pre{
+    background:#06080c; border:1px solid var(--border); border-radius:10px; padding:14px 16px;
+    overflow-x:auto; margin:10px 0; color:#9be9c4;
+  }
+  code.inline{
+    background:rgba(255,255,255,0.08); padding:2px 6px; border-radius:5px; color:#ffd479;
+    font-size:13px;
+  }
+  a{color:var(--accent); text-decoration:none; border-bottom:1px dotted rgba(38,198,218,0.5);}
+  a:hover{color:#7fe3ee;}
+  ul{margin:8px 0; padding-left:22px; color:#c4cdda; font-size:14.5px;}
+  li{margin-bottom:6px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:14px;}
+  @media (max-width:680px){.grid2{grid-template-columns:1fr;}}
+  .filecard{
+    background:var(--panel2); border:1px solid var(--border); border-radius:10px;
+    padding:14px 16px; font-size:13.5px;
+  }
+  .filecard .path{color:var(--accent); font-family:monospace; font-weight:700; display:block; margin-bottom:4px;}
+  details.tshoot{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:4px 18px; margin-bottom:10px;
+  }
+  details.tshoot summary{
+    cursor:pointer; padding:14px 0; font-weight:600; font-size:14.5px; color:#dce3ec;
+    list-style:none; display:flex; align-items:center; gap:10px;
+  }
+  details.tshoot summary::-webkit-details-marker{display:none;}
+  details.tshoot summary::before{content:"+"; color:var(--accent); font-weight:800; font-size:18px; width:18px;}
+  details.tshoot[open] summary::before{content:"–";}
+  details.tshoot .body{padding:0 0 16px 28px; color:#b7c1d0; font-size:14px;}
+  .pill{
+    display:inline-block; font-size:11px; font-weight:700; padding:3px 9px; border-radius:20px;
+    margin-left:6px; vertical-align:middle;
+  }
+  .pill.req{background:rgba(255,184,77,0.15); color:var(--warn); border:1px solid rgba(255,184,77,0.4);}
+  .pill.opt{background:rgba(61,220,132,0.15); color:var(--good); border:1px solid rgba(61,220,132,0.4);}
+  footer{
+    margin-top:60px; padding-top:24px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:13px; text-align:center;
+  }
+  .checklist{list-style:none; padding-left:0;}
+  .checklist li{display:flex; gap:10px; align-items:flex-start; margin-bottom:10px;}
+  .checklist li::before{content:"✓"; color:var(--good); font-weight:800; flex:0 0 auto;}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="logos">
+    <div class="logo-chip" title="Flutter">
+      <svg width="30" height="30" viewBox="0 0 24 24"><path fill="#26c6da" d="M14.314 0L2.3 12 6 15.7 21.684.013h-7.37zm.014 11.072L7.857 17.53l6.47 6.47H21.7l-6.46-6.46 6.46-6.47h-7.37z"/></svg>
+    </div>
+    <div class="logo-chip" title="Python">
+      <svg width="28" height="28" viewBox="0 0 24 24"><path fill="#FFD43B" d="M11.9 0c-1 0-2 .1-2.8.3C6.6.8 6.2 1.8 6.2 3v2.2h5.8v.7H4c-1.3 0-2.4.9-2.7 2.6-.4 1.9-.4 3 0 5 .3 1.5 1.1 2.6 2.4 2.6h1.6v-2.6c0-1.5 1.3-2.8 2.8-2.8h5.8c1.2 0 2.2-1 2.2-2.2V3c0-1.2-.9-2.2-2-2.6C13.9.1 12.9 0 11.9 0z"/><path fill="#4584B6" d="M12.1 24c1 0 2-.1 2.8-.3 2.5-.5 2.9-1.5 2.9-2.7v-2.2h-5.8v-.7h7.9c1.3 0 2.4-.9 2.7-2.6.4-1.9.4-3.1 0-5-.3-1.5-1.1-2.6-2.4-2.6h-1.6v2.6c0 1.5-1.3 2.8-2.8 2.8H9.2C8 13.3 7 14.3 7 15.5V21c0 1.2.9 2.2 2 2.6.9.3 1.9.4 3.1.4z"/></svg>
+    </div>
+    <div class="logo-chip" title="Google Earth Engine">
+      <svg width="28" height="28" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="#4caf50" stroke-width="1.6"/><path d="M2 12h20M12 2c2.5 2.7 4 6.2 4 10s-1.5 7.3-4 10c-2.5-2.7-4-6.2-4-10s1.5-7.3 4-10z" fill="none" stroke="#4caf50" stroke-width="1.4"/></svg>
+    </div>
+  </div>
+  <h1>Wildcat &times; MHRI Fusion — Setup Guide</h1>
+  <p class="sub">A self-contained demo app: upload a burned area, run the USGS Wildcat
+  post-fire debris-flow model, and fuse the result live into the ASBPA Multi-Hazard
+  Resilience Index (MHRI) 1&nbsp;km grid.</p>
+  <div class="badge-row">
+    <span class="badge">FLUTTER WEB</span>
+    <span class="badge">PYTHON / FASTAPI</span>
+    <span class="badge">GOOGLE EARTH ENGINE</span>
+    <span class="badge">~25–40 MIN SETUP</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="greeting">
+    Dear <b>Dr. Nawa Raj Pradhan</b>,<br><br>
+    This folder contains a complete, standalone copy of one module from our larger
+    fire-hazard dashboard — the part that fuses Wildcat's debris-flow predictions into
+    the ASBPA MHRI grid. Everything the app needs to run (the app's code, the server
+    code, and the ~3.6&nbsp;GB of hazard-index data it reads from) is already included
+    in this folder, so nothing needs to be downloaded from anywhere except the two
+    pieces of free software below (Flutter and Python). Please follow the steps in
+    order — each one explains <i>why</i> it's needed, not just what to type. If anything
+    doesn't match what you see on your screen, that's a good place to email me.
+  </div>
+
+  <h2 class="section-title">What you'll install first</h2>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">1</div><h3>Install the Flutter SDK <span class="pill req">required</span></h3></div>
+    <p>The app's user interface (the map, the upload screen, the results panel) is written in
+    <b>Flutter</b>, Google's toolkit for building apps that also run in a normal web browser.</p>
+    <div class="why"><b>Why you need this:</b> without the Flutter SDK there is no way to compile
+    or launch the interface — it's the equivalent of needing Node.js to run a JavaScript app.</div>
+    <ul>
+      <li>Download Flutter from <a href="https://docs.flutter.dev/get-started/install/windows" target="_blank">docs.flutter.dev/get-started/install/windows</a> (choose Windows).</li>
+      <li>Unzip it so the folder sits at <code class="inline">C:\flutter</code> (this matches the
+      shortcut script included in this folder — if you put it somewhere else, see the
+      Troubleshooting section near the bottom).</li>
+      <li>Add <code class="inline">C:\flutter\bin</code> to your Windows PATH (the installer page
+      above shows exactly how — it's a one-time setting in "Environment Variables").</li>
+      <li>Open a new Command Prompt and run:</li>
+    </ul>
+    <pre>flutter doctor</pre>
+    <p>This checks your setup and tells you if anything else is missing. For this app you only
+    need the <b>Chrome</b> entry to show a checkmark — entries about Android/Visual Studio can be
+    ignored. Google Chrome itself must be installed (it almost certainly already is).</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">2</div><h3>Install Python 3.11 (or 3.12) <span class="pill req">required</span></h3></div>
+    <p>The "engine room" of the app — the part that actually runs the Wildcat hazard model and
+    builds the MHRI grid — is a small Python server.</p>
+    <div class="why"><b>Why you need this:</b> Flutter only draws the screen; all the real number-crunching
+    (terrain analysis, satellite imagery, hazard-index math) happens in this separate Python program,
+    which the Flutter app talks to over your own computer's local network address
+    (<code class="inline">localhost</code>) — nothing leaves your machine except the Earth Engine
+    requests in Step 4.</div>
+    <ul>
+      <li>Download Python from <a href="https://www.python.org/downloads/" target="_blank">python.org/downloads</a> — version 3.11 or 3.12.</li>
+      <li><b>Important:</b> on the first installer screen, tick <b>"Add python.exe to PATH"</b> before clicking Install.</li>
+      <li>Verify it worked by opening a new Command Prompt and running:</li>
+    </ul>
+    <pre>python --version</pre>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">3</div><h3>Get a free Google Earth Engine account <span class="pill req">required</span></h3></div>
+    <p>The "Prepare" step inside the app downloads a 10&nbsp;m elevation model and a burn-severity
+    map for whatever area you draw, from Google Earth Engine (GEE) — a free satellite-data platform
+    for research/non-commercial use.</p>
+    <div class="why"><b>Why you need this:</b> we don't ship a worldwide elevation dataset (that would be
+    terabytes) — instead the app fetches just the small piece it needs, on demand, from Google's servers,
+    using your own free account.</div>
+    <ul>
+      <li>Sign up at <a href="https://earthengine.google.com/signup/" target="_blank">earthengine.google.com/signup</a>
+      with any Google account — approval is usually instant for non-commercial/research use.</li>
+      <li>Once approved, note down a <b>Google Cloud project ID</b> tied to that account — if you've
+      never created one, Earth Engine's own onboarding flow will create a default one for you and show
+      you its ID (it looks like <code class="inline">ee-yourname</code> or similar). You'll type this
+      project ID into the app itself later — no need to write it down anywhere else.</li>
+    </ul>
+  </div>
+
+  <h2 class="section-title">Setting up this app's files</h2>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">4</div><h3>Install the Python server's dependencies</h3></div>
+    <p>Open <b>Command Prompt</b>, navigate into this folder's backend directory, create an isolated
+    Python environment, and install the required scientific packages:</p>
+    <pre>cd "<i>(path to this folder)</i>\assets\backend"
+python -m venv .venv
+.venv\Scripts\activate
+pip install -r requirements.txt</pre>
+    <div class="why"><b>Why a "venv"?</b> it's a private, throwaway copy of Python just for this app,
+    so its packages never conflict with anything else already on your computer.</div>
+    <p>This step downloads the geospatial libraries (GDAL, rasterio, GeoPandas) and the USGS
+    <code class="inline">wildcat</code> hazard-modeling package, plus Google's Earth Engine client.
+    It typically takes <b>5–15 minutes</b> depending on your internet speed — that's normal, even
+    if the screen looks idle for a while. If it ends with <code class="inline">Successfully installed
+    ...</code>, you're done with this step.</p>
+  </div>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">5</div><h3>Authenticate with Earth Engine (one-time)</h3></div>
+    <p>Still in the same Command Prompt window (so the environment from Step 4 is active), run:</p>
+    <pre>earthengine authenticate</pre>
+    <p>This opens your web browser, asks you to sign in with the Google account from Step 3, and
+    asks you to approve access. Once it says "Successfully saved authorization token", close that
+    browser tab — you never need to repeat this step on this computer again.</p>
+  </div>
+
+  <h2 class="section-title">Running the app</h2>
+
+  <div class="step">
+    <div class="step-head"><div class="step-num">6</div><h3>Double-click <code class="inline">start_app.bat</code></h3></div>
+    <p>In this folder, double-click <b><code class="inline">start_app.bat</code></b>. It will:</p>
+    <ul>
+      <li>Start the Python server in the background (a black window — leave it open, it's the
+      "engine room" from Step 4 running live).</li>
+      <li>Launch the app in a new Chrome window automatically.</li>
+    </ul>
+    <p>The first launch can take a minute longer than usual while Flutter compiles the app. After
+    that, just keep using the same double-click each time you want to open the app.</p>
+    <p>To close the app, simply close the Chrome tab and then close the black command window
+    (or press <code class="inline">Ctrl+C</code> in it).</p>
+    <div class="why"><b>If double-clicking does nothing or shows an error</b> about Flutter or
+    Git Bash not being found, see Troubleshooting below for the manual two-window method — it
+    always works as a fallback.</div>
+  </div>
+
+  <h2 class="section-title">Using the app</h2>
+  <div class="step">
+    <h3 style="margin-top:0;">A quick walkthrough</h3>
+    <ul class="checklist">
+      <li><b>Step 1 — Upload your AOI:</b> draw an Area of Interest (up to 700&nbsp;km²) in any
+      GIS tool (QGIS, ArcGIS, or the free browser tool <a href="https://geojson.io" target="_blank">geojson.io</a>),
+      export it as <code class="inline">.geojson</code> (or a zipped Shapefile), and upload it
+      with a name, year, and approximate fire date.</li>
+      <li><b>Step 2 — Data download:</b> paste your Google Cloud project ID from Step 3 and click
+      "Start GEE Download" — this fetches the elevation model and burn-severity map for your area.</li>
+      <li><b>Step 3 — Run Wildcat:</b> click "Run Wildcat" to model debris-flow probability for
+      four standard rainfall intensities (16/20/24/40 mm/hr).</li>
+      <li><b>Step 4 — Results:</b> toggle between the "Debris-flow" layer (per-catchment probability)
+      and the "MHRI grid" layer (the fused 1&nbsp;km hazard-index cells) on the map, switch rainfall
+      scenarios, and click any shape for its full parameter breakdown.</li>
+    </ul>
+    <p style="margin-top:14px;">If your AOI falls outside the 60-county ASBPA coverage area
+    (coastal California / Oregon / Washington), you'll still get Wildcat's debris-flow results —
+    just no MHRI fusion for that location, since that's the footprint the underlying hazard-index
+    data covers.</p>
+  </div>
+
+  <h2 class="section-title">What's inside this folder</h2>
+  <div class="grid2">
+    <div class="filecard"><span class="path">lib/</span>The Flutter app's screen and map code.</div>
+    <div class="filecard"><span class="path">assets/backend/</span>The Python server (FastAPI) that runs Wildcat and computes the MHRI grid.</div>
+    <div class="filecard"><span class="path">assets/wildcat/</span>The USGS Wildcat hazard-modeling package (vendored, installed in Step 4).</div>
+    <div class="filecard"><span class="path">assets/asbpa_data/</span>The ~3.6 GB ASBPA hazard-index dataset (60 counties × 44 parameters) used for MHRI fusion.</div>
+    <div class="filecard"><span class="path">start_app.bat</span>Double-click this to launch everything.</div>
+    <div class="filecard"><span class="path">instructions.html</span>This page.</div>
+  </div>
+  <p style="color:var(--muted); font-size:13.5px; margin-top:10px;">Nothing in this app reads from
+  or depends on any file outside this folder — it's fully self-contained and can be copied to another
+  computer or drive as a single unit (aside from the Flutter SDK and Python environment you install
+  once, system-wide, in Steps 1 and 2).</p>
+
+  <h2 class="section-title">Troubleshooting</h2>
+
+  <details class="tshoot">
+    <summary>start_app.bat says it can't find Flutter or Git Bash</summary>
+    <div class="body">
+      Run the two pieces manually instead, in two separate Command Prompt windows:<br><br>
+      <b>Window 1 (server):</b>
+      <pre>cd "(this folder)\assets\backend"
+.venv\Scripts\activate
+python -m uvicorn main:app --port 8000</pre>
+      <b>Window 2 (app), opened after Window 1 says it's running:</b>
+      <pre>cd "(this folder)"
+flutter run -d chrome</pre>
+      Leave both windows open while using the app.
+    </div>
+  </details>
+
+  <details class="tshoot">
+    <summary>pip install fails on geopandas / rasterio / fiona</summary>
+    <div class="body">
+      These normally install as ready-made "wheels" with no extra setup. If one still fails,
+      the most reliable fix on Windows is installing just those three packages via
+      <a href="https://docs.conda.io/en/latest/miniconda.html" target="_blank">Miniconda</a> instead:
+      <pre>conda create -n mhri python=3.11 -c conda-forge geopandas rasterio fiona shapely pyproj
+conda activate mhri
+pip install -r requirements.txt</pre>
+      Then use that <code class="inline">mhri</code> conda environment in place of
+      <code class="inline">.venv</code> everywhere above.
+    </div>
+  </details>
+
+  <details class="tshoot">
+    <summary>"Backend failed to start" / port 8000 already in use</summary>
+    <div class="body">
+      Something else on your computer is already using port 8000. Close any other copy of this
+      app's server that might still be running (check for a leftover black Command Prompt window),
+      or restart your computer if unsure, then try again.
+    </div>
+  </details>
+
+  <details class="tshoot">
+    <summary>GEE download step fails with an authentication or project error</summary>
+    <div class="body">
+      Re-run <code class="inline">earthengine authenticate</code> (Step 5) to refresh your login,
+      and double check the project ID you typed into the app matches exactly the one shown in your
+      Earth Engine / Google Cloud account.
+    </div>
+  </details>
+
+  <details class="tshoot">
+    <summary>"Uploaded perimeter is ... km², which exceeds the 700 km² limit"</summary>
+    <div class="body">
+      This cap exists because the MHRI fusion step samples 44 county-scale rasters per 1&nbsp;km
+      cell across your whole area — beyond ~700&nbsp;km² that becomes slow. Draw or upload a
+      smaller area.
+    </div>
+  </details>
+
+  <details class="tshoot">
+    <summary>Everything works but I want to confirm the server is alive</summary>
+    <div class="body">
+      With the server running, open <a href="http://localhost:8000/health">http://localhost:8000/health</a>
+      in a browser — it should show <code class="inline">{"status":"ok"}</code>.
+    </div>
+  </details>
+
+  <footer>
+    Built as a standalone copy of Module&nbsp;4 ("Wildcat &times; MHRI Fusion") from the larger
+    post-wildfire debris-flow dashboard.<br>
+    Questions at any step? Just email me — happy to walk through it together. — Subash
+  </footer>
+
+</div>
+</body>
+</html>

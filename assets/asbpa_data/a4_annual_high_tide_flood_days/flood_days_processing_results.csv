@@ -1,0 +1,61 @@
+county,state,county_pixels,lecz_pixels,phase1_pixels,phase2_pixels,total_value_pixels,min_flood_days,max_flood_days,mean_flood_days,has_lecz,processing_time,file
+Humboldt,CA,9641,468,423,171,594,2.200000047683716,6.079999923706055,5.694612979888916,True,5.88640284538269,a4_annual_high_tide_flood_days\CA\Humboldt_flood_days_lecz.tif
+Orange,CA,2209,208,144,78,222,1.840000033378601,2.0799999237060547,1.8513513803482056,True,1.353191614151001,a4_annual_high_tide_flood_days\CA\Orange_flood_days_lecz.tif
+Monterey,CA,8943,204,248,122,370,0.6000000238418579,0.7200000286102295,0.7182163000106812,True,5.278984546661377,a4_annual_high_tide_flood_days\CA\Monterey_flood_days_lecz.tif
+Ventura,CA,5018,175,162,75,237,2.119999885559082,2.119999885559082,2.119999408721924,True,2.7512331008911133,a4_annual_high_tide_flood_days\CA\Ventura_flood_days_lecz.tif
+Marin,CA,1566,372,393,131,524,0.47999998927116394,1.2400000095367432,0.8317174315452576,True,1.1992535591125488,a4_annual_high_tide_flood_days\CA\Marin_flood_days_lecz.tif
+Alameda,CA,2104,366,169,201,370,0.4399999976158142,0.4399999976158142,0.4399999976158142,True,1.6474194526672363,a4_annual_high_tide_flood_days\CA\Alameda_flood_days_lecz.tif
+Mendocino,CA,9433,148,195,71,266,1.9199999570846558,1.9199999570846558,1.9199998378753662,True,5.392339468002319,a4_annual_high_tide_flood_days\CA\Mendocino_flood_days_lecz.tif
+San Mateo,CA,1314,217,207,85,292,0.4399999976158142,0.47999998927116394,0.4443150758743286,True,0.9975461959838867,a4_annual_high_tide_flood_days\CA\San Mateo_flood_days_lecz.tif
+San Luis Obispo,CA,8949,103,197,19,216,0.6000000238418579,0.6000000238418579,0.5999999642372131,True,5.053802490234375,a4_annual_high_tide_flood_days\CA\San Luis Obispo_flood_days_lecz.tif
+San Diego,CA,11297,329,249,120,369,2.0799999237060547,4.119999885559082,3.110365390777588,True,6.308226585388184,a4_annual_high_tide_flood_days\CA\San Diego_flood_days_lecz.tif
+Los Angeles,CA,11019,273,423,77,500,1.840000033378601,2.119999885559082,1.904119849205017,True,6.198465347290039,a4_annual_high_tide_flood_days\CA\Los Angeles_flood_days_lecz.tif
+Contra Costa,CA,2065,484,282,228,510,0.4399999976158142,0.5600000023841858,0.5466405749320984,True,1.545738697052002,a4_annual_high_tide_flood_days\CA\Contra Costa_flood_days_lecz.tif
+Del Norte,CA,2805,144,127,73,200,2.200000047683716,2.200000047683716,2.200000286102295,True,1.689009666442871,a4_annual_high_tide_flood_days\CA\Del Norte_flood_days_lecz.tif
+Santa Barbara,CA,7514,184,463,45,508,0.6000000238418579,2.119999885559082,1.1236220598220825,True,4.310973167419434,a4_annual_high_tide_flood_days\CA\Santa Barbara_flood_days_lecz.tif
+San Francisco,CA,170,63,63,18,81,0.4399999976158142,1.2400000095367432,0.49975308775901794,True,0.1454472541809082,a4_annual_high_tide_flood_days\CA\San Francisco_flood_days_lecz.tif
+Sonoma,CA,4333,238,204,123,327,0.47999998927116394,1.9199999570846558,0.8894188404083252,True,2.8890182971954346,a4_annual_high_tide_flood_days\CA\Sonoma_flood_days_lecz.tif
+Solano,CA,2368,839,478,368,846,0.5600000023841858,0.5600000023841858,0.5600000023841858,True,2.704371690750122,a4_annual_high_tide_flood_days\CA\Solano_flood_days_lecz.tif
+Napa,CA,2185,118,76,42,118,0.5600000023841858,0.5600000023841858,0.559999942779541,True,1.491027593612671,a4_annual_high_tide_flood_days\CA\Napa_flood_days_lecz.tif
+Santa Cruz,CA,1289,74,90,27,117,0.7200000286102295,0.7200000286102295,0.720000147819519,True,0.7634239196777344,a4_annual_high_tide_flood_days\CA\Santa Cruz_flood_days_lecz.tif
+Santa Clara,CA,3565,138,49,89,138,0.4399999976158142,0.4399999976158142,0.4399999976158142,True,2.219813346862793,a4_annual_high_tide_flood_days\CA\Santa Clara_flood_days_lecz.tif
+San Joaquin,CA,3870,1198,348,850,1198,0.5600000023841858,0.5600000023841858,0.5600000023841858,True,3.1392784118652344,a4_annual_high_tide_flood_days\CA\San Joaquin_flood_days_lecz.tif
+Trinity,CA,8675,0,0,0,0,,,,False,0.4536111354827881,a4_annual_high_tide_flood_days\CA\Trinity_flood_days_lecz.tif
+San Bernardino,CA,52679,12,0,0,0,,,,True,0.39922356605529785,a4_annual_high_tide_flood_days\CA\San Bernardino_flood_days_lecz.tif
+Yolo,CA,2834,500,235,370,605,0.5600000023841858,0.5600000023841858,0.5600000023841858,True,2.010782480239868,a4_annual_high_tide_flood_days\CA\Yolo_flood_days_lecz.tif
+Siskiyou,CA,16834,0,0,0,0,,,,False,0.9207417964935303,a4_annual_high_tide_flood_days\CA\Siskiyou_flood_days_lecz.tif
+San Benito,CA,3817,0,0,0,0,,,,False,0.09478878974914551,a4_annual_high_tide_flood_days\CA\San Benito_flood_days_lecz.tif
+Sutter,CA,1727,3,138,2,140,0.5600000023841858,0.5600000023841858,0.5600000619888306,True,1.0605580806732178,a4_annual_high_tide_flood_days\CA\Sutter_flood_days_lecz.tif
+Sacramento,CA,2739,759,338,467,805,0.5600000023841858,0.5600000023841858,0.5600000023841858,True,2.156139612197876,a4_annual_high_tide_flood_days\CA\Sacramento_flood_days_lecz.tif
+Riverside,CA,19197,706,0,0,0,,,,True,0.519371509552002,a4_annual_high_tide_flood_days\CA\Riverside_flood_days_lecz.tif
+Lincoln,OR,2738,316,229,137,366,7.0,7.0,7.0,True,1.8755521774291992,a4_annual_high_tide_flood_days\OR\Lincoln_flood_days_lecz.tif
+Tillamook,OR,3111,320,241,111,352,7.0,7.28000020980835,7.180170059204102,True,1.94521164894104,a4_annual_high_tide_flood_days\OR\Tillamook_flood_days_lecz.tif
+Coos,OR,4417,446,314,176,490,3.8400001525878906,5.440000057220459,5.3306121826171875,True,2.8364033699035645,a4_annual_high_tide_flood_days\OR\Coos_flood_days_lecz.tif
+Douglas,OR,13534,161,138,64,202,5.440000057220459,5.440000057220459,5.439999580383301,True,7.692248344421387,a4_annual_high_tide_flood_days\OR\Douglas_flood_days_lecz.tif
+Lane,OR,12322,147,105,74,179,5.440000057220459,7.0,6.603463649749756,True,7.567491054534912,a4_annual_high_tide_flood_days\OR\Lane_flood_days_lecz.tif
+Clatsop,OR,2370,461,319,175,494,7.28000020980835,7.28000020980835,7.279999732971191,True,1.5903339385986328,a4_annual_high_tide_flood_days\OR\Clatsop_flood_days_lecz.tif
+Curry,OR,4499,108,195,29,224,2.200000047683716,3.8400001525878906,3.381190776824951,True,2.789945602416992,a4_annual_high_tide_flood_days\OR\Curry_flood_days_lecz.tif
+Benton,OR,1892,0,0,0,0,,,,False,0.07486462593078613,a4_annual_high_tide_flood_days\OR\Benton_flood_days_lecz.tif
+Josephine,OR,4450,0,0,0,0,,,,False,0.1076810359954834,a4_annual_high_tide_flood_days\OR\Josephine_flood_days_lecz.tif
+Columbia,OR,1851,284,202,103,305,7.28000020980835,7.28000020980835,7.279999732971191,True,1.1885900497436523,a4_annual_high_tide_flood_days\OR\Columbia_flood_days_lecz.tif
+Multnomah,OR,1321,193,180,112,292,7.28000020980835,7.28000020980835,7.28000020980835,True,0.9160802364349365,a4_annual_high_tide_flood_days\OR\Multnomah_flood_days_lecz.tif
+Clackamas,OR,5083,11,0,0,0,,,,True,0.3028125762939453,a4_annual_high_tide_flood_days\OR\Clackamas_flood_days_lecz.tif
+King,WA,5943,145,378,16,394,2.9600000381469727,2.9600000381469727,2.9599995613098145,True,4.099057674407959,a4_annual_high_tide_flood_days\WA\King_flood_days_lecz.tif
+Grays Harbor,WA,5292,548,355,244,599,7.0,11.880000114440918,11.835190773010254,True,4.0073254108428955,a4_annual_high_tide_flood_days\WA\Grays Harbor_flood_days_lecz.tif
+Whatcom,WA,5937,214,193,79,272,4.360000133514404,4.360000133514404,4.360000133514404,True,3.774949550628662,a4_annual_high_tide_flood_days\WA\Whatcom_flood_days_lecz.tif
+Pierce,WA,4726,235,388,33,421,2.9600000381469727,2.9600000381469727,2.9599995613098145,True,3.3423593044281006,a4_annual_high_tide_flood_days\WA\Pierce_flood_days_lecz.tif
+Pacific,WA,2731,687,391,315,706,7.28000020980835,11.880000114440918,10.526061058044434,True,2.0433876514434814,a4_annual_high_tide_flood_days\WA\Pacific_flood_days_lecz.tif
+Thurston,WA,2097,91,173,22,195,2.9600000381469727,2.9600000381469727,2.9599997997283936,True,1.3467764854431152,a4_annual_high_tide_flood_days\WA\Thurston_flood_days_lecz.tif
+Island,WA,745,290,371,53,424,2.9600000381469727,3.4000000953674316,3.3626415729522705,True,0.5874640941619873,a4_annual_high_tide_flood_days\WA\Island_flood_days_lecz.tif
+San Juan,WA,754,116,501,4,505,4.360000133514404,4.360000133514404,4.360000133514404,True,0.6335575580596924,a4_annual_high_tide_flood_days\WA\San Juan_flood_days_lecz.tif
+Snohomish,WA,5706,287,198,125,323,2.9600000381469727,3.4000000953674316,3.103715181350708,True,4.221397161483765,a4_annual_high_tide_flood_days\WA\Snohomish_flood_days_lecz.tif
+Jefferson,WA,5065,247,422,26,448,3.4000000953674316,9.4399995803833,4.3050360679626465,True,3.6021649837493896,a4_annual_high_tide_flood_days\WA\Jefferson_flood_days_lecz.tif
+Wahkiakum,WA,782,146,129,49,178,7.28000020980835,7.28000020980835,7.279999732971191,True,0.5358808040618896,a4_annual_high_tide_flood_days\WA\Wahkiakum_flood_days_lecz.tif
+Skagit,WA,4893,400,339,184,523,3.4000000953674316,4.360000133514404,3.6444363594055176,True,3.8127083778381348,a4_annual_high_tide_flood_days\WA\Skagit_flood_days_lecz.tif
+Mason,WA,2773,225,340,23,363,2.9600000381469727,3.9200000762939453,3.097740888595581,True,2.1147267818450928,a4_annual_high_tide_flood_days\WA\Mason_flood_days_lecz.tif
+Kitsap,WA,1247,219,387,20,407,2.9600000381469727,3.4000000953674316,3.092251777648926,True,1.0485692024230957,a4_annual_high_tide_flood_days\WA\Kitsap_flood_days_lecz.tif
+Clallam,WA,4843,237,371,36,407,3.4000000953674316,7.0,5.558089733123779,True,3.4551584720611572,a4_annual_high_tide_flood_days\WA\Clallam_flood_days_lecz.tif
+Cowlitz,WA,3149,169,119,72,191,7.28000020980835,7.28000020980835,7.280000686645508,True,2.3538742065429688,a4_annual_high_tide_flood_days\WA\Cowlitz_flood_days_lecz.tif
+Clark,WA,1772,146,111,86,197,7.28000020980835,7.28000020980835,7.28000020980835,True,1.1713063716888428,a4_annual_high_tide_flood_days\WA\Clark_flood_days_lecz.tif
+Lewis,WA,6561,0,0,0,0,,,,False,0.7248022556304932,a4_annual_high_tide_flood_days\WA\Lewis_flood_days_lecz.tif
+Skamania,WA,4521,7,42,0,42,7.28000020980835,7.28000020980835,7.28000020980835,True,2.716904640197754,a4_annual_high_tide_flood_days\WA\Skamania_flood_days_lecz.tif

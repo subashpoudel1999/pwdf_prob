@@ -1,0 +1,12 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>w95_threshold</Description>
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">7.0901330166333</MDI>
+      <MDI key="STATISTICS_MEAN">4.1129522446739</MDI>
+      <MDI key="STATISTICS_MINIMUM">2.0229443924809</MDI>
+      <MDI key="STATISTICS_STDDEV">1.3082285282679</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">68.49</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

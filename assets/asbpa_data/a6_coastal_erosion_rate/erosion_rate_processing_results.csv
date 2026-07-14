@@ -1,0 +1,61 @@
+county,state,county_pixels,lecz_pixels,phase1_pixels,phase2_pixels,total_value_pixels,min_erosion_myr,max_erosion_myr,mean_erosion_myr,processing_time,file
+Humboldt,CA,9641,468,302,308,610,-0.5,5.460000038146973,1.4395899772644043,6.39913272857666,a6_coastal_erosion_rate\CA\Humboldt_erosion_rate_lecz.tif
+Orange,CA,2209,208,95,130,225,-0.46000000834465027,1.4600000381469727,1.004355549812317,1.4348702430725098,a6_coastal_erosion_rate\CA\Orange_erosion_rate_lecz.tif
+Monterey,CA,8943,204,225,154,379,-0.5600000023841858,0.4000000059604645,-0.14019785821437836,5.711846351623535,a6_coastal_erosion_rate\CA\Monterey_erosion_rate_lecz.tif
+Ventura,CA,5018,175,107,109,216,-0.4099999964237213,1.75,-0.04842593893408775,3.0397651195526123,a6_coastal_erosion_rate\CA\Ventura_erosion_rate_lecz.tif
+Marin,CA,1566,372,218,278,496,-0.550000011920929,-0.3499999940395355,-0.50734543800354,1.3075661659240723,a6_coastal_erosion_rate\CA\Marin_erosion_rate_lecz.tif
+Alameda,CA,2104,366,0,0,0,,,,0.5227429866790771,a6_coastal_erosion_rate\CA\Alameda_erosion_rate_lecz.tif
+Mendocino,CA,9433,148,205,104,309,-0.5,-0.44999998807907104,-0.4899137020111084,5.689806699752808,a6_coastal_erosion_rate\CA\Mendocino_erosion_rate_lecz.tif
+San Mateo,CA,1314,217,97,207,304,-0.30000001192092896,-0.30000001192092896,-0.29999998211860657,1.0887165069580078,a6_coastal_erosion_rate\CA\San Mateo_erosion_rate_lecz.tif
+San Luis Obispo,CA,8949,103,170,58,228,-0.30000001192092896,-0.05000000074505806,-0.29095393419265747,5.6458516120910645,a6_coastal_erosion_rate\CA\San Luis Obispo_erosion_rate_lecz.tif
+San Diego,CA,11297,329,143,209,352,-0.46000000834465027,1.75,0.6979308724403381,6.965673208236694,a6_coastal_erosion_rate\CA\San Diego_erosion_rate_lecz.tif
+Los Angeles,CA,11019,273,243,160,403,-0.46000000834465027,1.75,0.3441646099090576,6.721741676330566,a6_coastal_erosion_rate\CA\Los Angeles_erosion_rate_lecz.tif
+Contra Costa,CA,2065,484,0,0,0,,,,0.30800747871398926,a6_coastal_erosion_rate\CA\Contra Costa_erosion_rate_lecz.tif
+Del Norte,CA,2805,144,92,94,186,-0.5,-0.44999998807907104,-0.46899640560150146,1.7868061065673828,a6_coastal_erosion_rate\CA\Del Norte_erosion_rate_lecz.tif
+Santa Barbara,CA,7514,184,338,90,428,-0.46000000834465027,0.20000000298023224,-0.2365809977054596,4.627234697341919,a6_coastal_erosion_rate\CA\Santa Barbara_erosion_rate_lecz.tif
+San Francisco,CA,170,63,32,46,78,-0.5400000214576721,-0.30000001192092896,-0.5200000405311584,0.14597606658935547,a6_coastal_erosion_rate\CA\San Francisco_erosion_rate_lecz.tif
+Sonoma,CA,4333,238,98,219,317,-0.5,-0.30000001192092896,-0.36603572964668274,2.9795243740081787,a6_coastal_erosion_rate\CA\Sonoma_erosion_rate_lecz.tif
+Solano,CA,2368,839,0,0,0,,,,1.3580727577209473,a6_coastal_erosion_rate\CA\Solano_erosion_rate_lecz.tif
+Napa,CA,2185,118,0,0,0,,,,0.33885860443115234,a6_coastal_erosion_rate\CA\Napa_erosion_rate_lecz.tif
+Santa Cruz,CA,1289,74,68,59,127,-0.30000001192092896,0.4000000059604645,0.20673227310180664,0.8027791976928711,a6_coastal_erosion_rate\CA\Santa Cruz_erosion_rate_lecz.tif
+Santa Clara,CA,3565,138,0,0,0,,,,0.32278895378112793,a6_coastal_erosion_rate\CA\Santa Clara_erosion_rate_lecz.tif
+San Joaquin,CA,3870,1198,0,0,0,,,,0.6994349956512451,a6_coastal_erosion_rate\CA\San Joaquin_erosion_rate_lecz.tif
+Trinity,CA,8675,0,0,0,0,,,,0.4523332118988037,a6_coastal_erosion_rate\CA\Trinity_erosion_rate_lecz.tif
+San Bernardino,CA,52679,12,0,0,0,,,,0.4073057174682617,a6_coastal_erosion_rate\CA\San Bernardino_erosion_rate_lecz.tif
+Yolo,CA,2834,500,0,0,0,,,,0.4298698902130127,a6_coastal_erosion_rate\CA\Yolo_erosion_rate_lecz.tif
+Siskiyou,CA,16834,0,0,0,0,,,,0.9529483318328857,a6_coastal_erosion_rate\CA\Siskiyou_erosion_rate_lecz.tif
+San Benito,CA,3817,0,0,0,0,,,,0.09368252754211426,a6_coastal_erosion_rate\CA\San Benito_erosion_rate_lecz.tif
+Sutter,CA,1727,3,0,0,0,,,,0.1619737148284912,a6_coastal_erosion_rate\CA\Sutter_erosion_rate_lecz.tif
+Sacramento,CA,2739,759,0,0,0,,,,0.5644049644470215,a6_coastal_erosion_rate\CA\Sacramento_erosion_rate_lecz.tif
+Riverside,CA,19197,706,0,0,0,,,,0.5345377922058105,a6_coastal_erosion_rate\CA\Riverside_erosion_rate_lecz.tif
+Lincoln,OR,2738,316,172,183,355,-0.25,-0.20000000298023224,-0.2031455636024475,1.9544565677642822,a6_coastal_erosion_rate\OR\Lincoln_erosion_rate_lecz.tif
+Tillamook,OR,3111,320,195,163,358,-0.5,-0.019999999552965164,-0.23855680227279663,2.020989179611206,a6_coastal_erosion_rate\OR\Tillamook_erosion_rate_lecz.tif
+Coos,OR,4417,446,159,318,477,-0.5,-0.5,-0.5,3.009373664855957,a6_coastal_erosion_rate\OR\Coos_erosion_rate_lecz.tif
+Douglas,OR,13534,161,102,76,178,-0.5,-0.23999999463558197,-0.46713483333587646,8.09263300895691,a6_coastal_erosion_rate\OR\Douglas_erosion_rate_lecz.tif
+Lane,OR,12322,147,91,77,168,-0.23999999463558197,-0.20000000298023224,-0.22928571701049805,8.13989806175232,a6_coastal_erosion_rate\OR\Lane_erosion_rate_lecz.tif
+Clatsop,OR,2370,461,95,391,486,-3.3152999877929688,4.363999843597412,-0.37190836668014526,1.6374943256378174,a6_coastal_erosion_rate\OR\Clatsop_erosion_rate_lecz.tif
+Curry,OR,4499,108,139,54,193,-0.5,-0.10000000149011612,-0.48100170493125916,2.8447892665863037,a6_coastal_erosion_rate\OR\Curry_erosion_rate_lecz.tif
+Benton,OR,1892,0,0,0,0,,,,0.07438135147094727,a6_coastal_erosion_rate\OR\Benton_erosion_rate_lecz.tif
+Josephine,OR,4450,0,0,0,0,,,,0.10036230087280273,a6_coastal_erosion_rate\OR\Josephine_erosion_rate_lecz.tif
+Columbia,OR,1851,284,0,0,0,,,,0.19442081451416016,a6_coastal_erosion_rate\OR\Columbia_erosion_rate_lecz.tif
+Multnomah,OR,1321,193,0,0,0,,,,0.18271112442016602,a6_coastal_erosion_rate\OR\Multnomah_erosion_rate_lecz.tif
+Clackamas,OR,5083,11,0,0,0,,,,0.31961917877197266,a6_coastal_erosion_rate\OR\Clackamas_erosion_rate_lecz.tif
+King,WA,5943,145,0,0,0,,,,0.9942235946655273,a6_coastal_erosion_rate\WA\King_erosion_rate_lecz.tif
+Grays Harbor,WA,5292,548,136,438,574,-3.4544999599456787,11.79699993133545,-0.07179810851812363,4.182936668395996,a6_coastal_erosion_rate\WA\Grays Harbor_erosion_rate_lecz.tif
+Whatcom,WA,5937,214,0,0,0,,,,0.6849668025970459,a6_coastal_erosion_rate\WA\Whatcom_erosion_rate_lecz.tif
+Pierce,WA,4726,235,0,0,0,,,,0.8507907390594482,a6_coastal_erosion_rate\WA\Pierce_erosion_rate_lecz.tif
+Pacific,WA,2731,687,121,574,695,-4.632299900054932,17.588199615478516,1.1650818586349487,2.1076173782348633,a6_coastal_erosion_rate\WA\Pacific_erosion_rate_lecz.tif
+Thurston,WA,2097,91,0,0,0,,,,0.2755930423736572,a6_coastal_erosion_rate\WA\Thurston_erosion_rate_lecz.tif
+Island,WA,745,290,0,0,0,,,,0.1778275966644287,a6_coastal_erosion_rate\WA\Island_erosion_rate_lecz.tif
+San Juan,WA,754,116,0,0,0,,,,0.2176210880279541,a6_coastal_erosion_rate\WA\San Juan_erosion_rate_lecz.tif
+Snohomish,WA,5706,287,0,0,0,,,,1.2109603881835938,a6_coastal_erosion_rate\WA\Snohomish_erosion_rate_lecz.tif
+Jefferson,WA,5065,247,51,215,266,-0.5,0.597000002861023,-0.2904532849788666,3.668858051300049,a6_coastal_erosion_rate\WA\Jefferson_erosion_rate_lecz.tif
+Wahkiakum,WA,782,146,0,0,0,,,,0.09204292297363281,a6_coastal_erosion_rate\WA\Wahkiakum_erosion_rate_lecz.tif
+Skagit,WA,4893,400,0,0,0,,,,0.8004169464111328,a6_coastal_erosion_rate\WA\Skagit_erosion_rate_lecz.tif
+Mason,WA,2773,225,0,0,0,,,,0.4898703098297119,a6_coastal_erosion_rate\WA\Mason_erosion_rate_lecz.tif
+Kitsap,WA,1247,219,0,0,0,,,,0.22852325439453125,a6_coastal_erosion_rate\WA\Kitsap_erosion_rate_lecz.tif
+Clallam,WA,4843,237,269,114,383,-0.9402999877929688,10.641799926757812,0.6316201090812683,3.429272413253784,a6_coastal_erosion_rate\WA\Clallam_erosion_rate_lecz.tif
+Cowlitz,WA,3149,169,0,0,0,,,,0.5004446506500244,a6_coastal_erosion_rate\WA\Cowlitz_erosion_rate_lecz.tif
+Clark,WA,1772,146,0,0,0,,,,0.10814356803894043,a6_coastal_erosion_rate\WA\Clark_erosion_rate_lecz.tif
+Lewis,WA,6561,0,0,0,0,,,,0.6663999557495117,a6_coastal_erosion_rate\WA\Lewis_erosion_rate_lecz.tif
+Skamania,WA,4521,7,0,0,0,,,,0.10151410102844238,a6_coastal_erosion_rate\WA\Skamania_erosion_rate_lecz.tif

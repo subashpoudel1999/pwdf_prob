@@ -1,0 +1,32 @@
+# Environment
+python-dotenv>=1.0.0
+
+# Web framework
+fastapi>=0.115.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.10.0
+python-multipart==0.0.9
+
+# Numerical / data
+numpy>=1.26.0
+pandas>=2.2.0
+
+# Geospatial (binary wheels bundle GDAL — no system install needed)
+rasterio>=1.3.10
+geopandas>=0.14.4
+shapely>=2.0.4
+pyproj>=3.6.1
+fiona>=1.9.6
+
+# HTTP
+requests>=2.32.0
+
+# Google Earth Engine (required for `import ee` at module load — credentials
+# handled separately via `earthengine authenticate`, see instructions.html)
+earthengine-api>=0.1.400
+
+# USGS Wildcat (post-fire debris-flow assessment) — vendored source in
+# ../wildcat, depends on pfdf which is only published on USGS's package
+# index, not PyPI
+--extra-index-url https://code.usgs.gov/api/v4/groups/859/-/packages/pypi/simple
+-e ../wildcat

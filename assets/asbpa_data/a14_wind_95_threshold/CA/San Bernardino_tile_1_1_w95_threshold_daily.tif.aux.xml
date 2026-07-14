@@ -1,0 +1,12 @@
+<PAMDataset>
+  <PAMRasterBand band="1">
+    <Description>w95_threshold_daily</Description>
+    <Metadata>
+      <MDI key="STATISTICS_MAXIMUM">6.0262903202357</MDI>
+      <MDI key="STATISTICS_MEAN">4.3766686748267</MDI>
+      <MDI key="STATISTICS_MINIMUM">3.4849533256487</MDI>
+      <MDI key="STATISTICS_STDDEV">0.7094255043683</MDI>
+      <MDI key="STATISTICS_VALID_PERCENT">34.73</MDI>
+    </Metadata>
+  </PAMRasterBand>
+</PAMDataset>

@@ -1,0 +1,30 @@
+import geopandas as gpd
+import rasterio
+
+def calibration():
+    shapefile_path = '0_shapefiles/1_czma_shapefile/czma_state.shp'
+
+    try:
+        # Check State Shapefile
+        state_gdf = gpd.read_file(shapefile_path)
+        print("\n✅ State Shapefile successfully read")
+        print(f"Number of States: {len(state_gdf)}")
+        print(f"Shapefile CRS: {state_gdf.crs}")
+        print("\nState Names:")
+        print(state_gdf['NAME'].tolist())
+
+    except Exception as e:
+        print(f"❌ Error in calibration: {e}")
+
+if __name__ == "__main__":
+    calibration()
+
+
+Output:
+
+✅ State Shapefile successfully read
+Number of States: 23
+Shapefile CRS: EPSG:3857
+
+State Names:
+['Florida', 'Maryland', 'Rhode Island', 'New Hampshire', 'North Carolina', 'Connecticut', 'Delaware', 'California', 'New Jersey', 'Oregon', 'Pennsylvania', 'Washington', 'Louisiana', 'Georgia', 'Alabama', 'Texas', 'South Carolina', 'Maine', 'New York', 'Mississippi', 'Massachusetts', 'Virginia', 'District of Columbia']
