@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import services.wildcat_generic_service as _wg
 import services.wildcat_fire_prep_service as _fp
@@ -89,18 +89,31 @@ def get_wildcat_fire_perimeter(fire_id: str):
 
 
 class WildcatPrepRequest(BaseModel):
-    gee_project: str
+    # Optional for backwards compatibility. Production deployments should set
+    # GEE_PROJECT_ID on the backend instead of accepting project IDs from users.
+    gee_project: Optional[str] = None
 
 
 @router.post("/wildcat/fires/{fire_id:path}/prepare")
-def start_wildcat_fire_prep(fire_id: str, request: WildcatPrepRequest):
+def start_wildcat_fire_prep(fire_id: str, request: WildcatPrepRequest | None = None):
     """Download DEM + dNBR from GEE for a fire that only has a perimeter."""
     try:
-        return _fp.start_data_prep(fire_id, request.gee_project)
+        return _fp.start_data_prep(fire_id, request.gee_project if request else None)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/gee/status")
+def get_gee_status():
+    """Verify that the backend can authenticate to Earth Engine."""
+    import services.gee_service as _gee
+
+    status = _gee.test_connection()
+    if not status.get("success"):
+        raise HTTPException(status_code=500, detail=status.get("message", "GEE check failed"))
+    return status
 
 
 @router.get("/wildcat/prepare/status/{job_id}")

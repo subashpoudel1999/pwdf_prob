@@ -12,9 +12,11 @@ Usage:
 
 import io
 import math
+import os
 import shutil
 import tempfile
 import zipfile
+from typing import Optional
 
 import ee
 import geopandas as gpd
@@ -40,7 +42,17 @@ MAX_DOWNLOAD_AREA_KM2 = 700.0
 WATER_SENTINEL = -9999.0
 
 
-def initialize(project_id: str) -> None:
+def _configured_project_id(project_id: Optional[str] = None) -> str:
+    configured = (project_id or os.environ.get("GEE_PROJECT_ID") or "").strip()
+    if not configured:
+        raise RuntimeError(
+            "GEE project ID is not configured. Set GEE_PROJECT_ID in the "
+            "backend environment."
+        )
+    return configured
+
+
+def _legacy_initialize(project_id: Optional[str] = None) -> str:
     """
     Initialise GEE using locally stored credentials.
     The user must have already run `earthengine authenticate` on this machine.
@@ -54,7 +66,7 @@ def initialize(project_id: str) -> None:
     _initialized_project = project_id
 
 
-def test_connection(project_id: str) -> dict:
+def _legacy_test_connection(project_id: str) -> dict:
     """
     Test that GEE can be reached and the project ID is valid.
     Returns {"success": True/False, "message": "..."}
@@ -68,6 +80,43 @@ def test_connection(project_id: str) -> dict:
                 "success": True,
                 "message": f"Connected to GEE project '{project_id}'. 3DEP 10m DEM is accessible.",
                 "project_id": project_id,
+            }
+        return {"success": False, "message": "Connected but could not verify 3DEP dataset."}
+    except ee.EEException as e:
+        return {"success": False, "message": f"GEE error: {str(e)}"}
+    except Exception as e:
+        return {"success": False, "message": f"Connection failed: {str(e)}"}
+
+
+def initialize(project_id: Optional[str] = None) -> str:
+    """
+    Initialise GEE for the configured project.
+
+    Cloud Run supplies ambient service-account credentials. Local development
+    still works with credentials created by `earthengine authenticate`.
+    """
+    global _initialized_project
+    project_id = _configured_project_id(project_id)
+    if _initialized_project == project_id:
+        return project_id
+    ee.Initialize(project=project_id)
+    _initialized_project = project_id
+    return project_id
+
+
+def test_connection(project_id: Optional[str] = None) -> dict:
+    """
+    Test that GEE can be reached and the project ID is valid.
+    Returns {"success": True/False, "message": "..."}
+    """
+    try:
+        active_project = initialize(project_id)
+        info = ee.ImageCollection("USGS/3DEP/10m_collection").mosaic().bandNames().getInfo()
+        if "elevation" in info:
+            return {
+                "success": True,
+                "message": f"Connected to GEE project '{active_project}'. 3DEP 10m DEM is accessible.",
+                "project_id": active_project,
             }
         return {"success": False, "message": "Connected but could not verify 3DEP dataset."}
     except ee.EEException as e:

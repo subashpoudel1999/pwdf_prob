@@ -55,7 +55,6 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
       text: DateTime.now().year.toString());
   final TextEditingController _dateCtrl = TextEditingController(
       text: '${DateTime.now().year}-07-01');
-  final TextEditingController _geeCtrl = TextEditingController(text: '');
 
   _Step _step = _Step.upload;
 
@@ -119,7 +118,6 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
     _nameCtrl.dispose();
     _yearCtrl.dispose();
     _dateCtrl.dispose();
-    _geeCtrl.dispose();
     _hitNotifier.dispose();
     super.dispose();
   }
@@ -189,7 +187,7 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
       final resp = await http.post(
         Uri.parse('$_base/wildcat/fires/$_fireId/prepare'),
         headers: {'Content-Type': 'application/json'},
-        body: json.encode({'gee_project': _geeCtrl.text.trim()}),
+        body: json.encode({}),
       );
       if (resp.statusCode == 200) {
         final data = json.decode(resp.body);
@@ -582,9 +580,8 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
         const SizedBox(height: 20),
 
         if (!started) ...[
-          _subLabel('GEE Project ID'),
-          const SizedBox(height: 8),
-          _textField(_geeCtrl, 'e.g. my-gee-project-123'),
+          const Text('The backend will use the configured Earth Engine project for this deployment.',
+              style: TextStyle(color: Colors.white38, fontSize: 11, height: 1.5)),
           const SizedBox(height: 24),
         ],
         if (started) ...[

@@ -140,7 +140,7 @@ def get_fire_catalog() -> List[Dict]:
 
 # ── Data prep (background job) ────────────────────────────────────────────────
 
-def start_data_prep(fire_id: str, gee_project: str) -> Dict[str, Any]:
+def start_data_prep(fire_id: str, gee_project: Optional[str] = None) -> Dict[str, Any]:
     """Start a GEE data-prep job for a fire.  Returns {job_id, fire_id}."""
     # Check if this fire is already in the catalog and ready
     catalog = {f["id"]: f for f in get_fire_catalog()}
@@ -179,7 +179,7 @@ def _upd(job_id: str, step: int, msg: str, pct: int):
     log.info("[%s] step=%d (%d%%) %s", job_id, step, pct, msg)
 
 
-def _run_prep(job_id: str, fire: Dict, gee_project: str):
+def _run_prep(job_id: str, fire: Dict, gee_project: Optional[str] = None):
     """Background: fetch perimeter → DEM → dNBR → save to wildcat/<slug>/inputs/."""
     import ee
     import services.gee_service as gee_svc
@@ -192,8 +192,9 @@ def _run_prep(job_id: str, fire: Dict, gee_project: str):
 
     try:
         # ── Step 1: GEE auth ────────────────────────────────────────────────
-        _upd(job_id, 1, f"Authenticating with GEE project '{gee_project}'...", 5)
-        gee_svc.initialize(gee_project)
+        _upd(job_id, 1, "Authenticating with the configured GEE project...", 5)
+        active_project = gee_svc.initialize(gee_project)
+        _upd(job_id, 1, f"Connected to GEE project '{active_project}'.", 8)
 
         # ── Step 2: Fetch perimeter from MTBS ──────────────────────────────
         _upd(job_id, 2, f"Fetching {fire_name} perimeter from USFS MTBS...", 12)
