@@ -58,3 +58,6 @@ assets/wildcat/wildcat/__pycache__/
 assets/asbpa_data/a7_vertical_land_motion/California_LLVS.txt
 assets/asbpa_data/a8_post_wildfire_debris_flow/combined_wildfire_debris_flow.shp
 assets/asbpa_data/a4_annual_high_tide_flood_days/processed_shoreline_flood_days.geojson
+
+# Python venv (root)
+.venv/

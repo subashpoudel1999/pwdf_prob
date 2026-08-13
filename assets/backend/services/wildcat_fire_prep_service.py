@@ -17,6 +17,7 @@ from __future__ import annotations
 import io
 import json
 import logging
+import os
 import shutil
 import tempfile
 import threading
@@ -36,7 +37,11 @@ log = logging.getLogger(__name__)
 # ── Paths ─────────────────────────────────────────────────────────────────────
 _BACKEND_ROOT = Path(__file__).parent.parent
 _WEBAPP_ROOT  = _BACKEND_ROOT.parent
-_WILDCAT_DIR  = _WEBAPP_ROOT / "wildcat"
+# Bundled, read-only wildcat package + static catalog root.
+_WILDCAT_DIR  = Path(os.environ.get("WILDCAT_DATA_DIR", str(_WEBAPP_ROOT / "wildcat")))
+# Dynamic, per-fire output root — see the matching comment in
+# wildcat_generic_service.py for why this is separate from _WILDCAT_DIR.
+_FIRE_DATA_DIR = Path(os.environ.get("FIRE_DATA_DIR", str(_WILDCAT_DIR)))
 # Optional extra catalog of fires (not shipped with this app — this module
 # only needs the user's own uploaded AOI, which _scan_tier1_fires() already
 # picks up from _WILDCAT_DIR). _scan_csv_fires() below no-ops if missing.
@@ -56,7 +61,7 @@ def _scan_tier1_fires() -> List[Dict]:
     dNBR is also fetched live unless already cached (kept for a few
     well-known fires as fast demos)."""
     fires = []
-    for fire_dir in sorted(_WILDCAT_DIR.iterdir()):
+    for fire_dir in sorted(_FIRE_DATA_DIR.iterdir()):
         if not fire_dir.is_dir():
             continue
         inp = fire_dir / "inputs"
@@ -104,7 +109,7 @@ def _scan_csv_fires() -> List[Dict]:
         fire_name = str(row.get("fire_name", "")).strip()
         year = int(row.get("year", 0))
         slug = f"{fire_name.lower()}_{year}"
-        inp_dir = _WILDCAT_DIR / slug / "inputs"
+        inp_dir = _FIRE_DATA_DIR / slug / "inputs"
         # Check if already downloaded
         shp_ok = len(list(inp_dir.glob("*.shp"))) > 0 if inp_dir.exists() else False
         tif_ok = len(list(inp_dir.glob("*.tif"))) >= 2 if inp_dir.exists() else False

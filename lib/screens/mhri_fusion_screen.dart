@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
@@ -9,6 +10,29 @@ import 'package:file_picker/file_picker.dart';
 
 import '../config/app_config.dart';
 import '../utils/geojson_parser.dart';
+
+// Bundled catalog of pre-made zipped Shapefiles for California cities, so
+// users assessing one of these don't need to source/zip their own AOI file.
+// Keys are asset filenames under assets/CA_city_shapefiles/ (must match
+// pubspec.yaml's asset declaration); values are the human-readable labels
+// shown in the dropdown.
+const Map<String, String> _kCaCityShapefiles = {
+  'CoronaCA.zip': 'Corona, CA',
+  'FontanaCA.zip': 'Fontana, CA',
+  'HesperiaCA.zip': 'Hesperia, CA',
+  'IrvineCA.zip': 'Irvine, CA',
+  'Los_AngelesCA.zip': 'Los Angeles, CA',
+  'MalibuCA.zip': 'Malibu, CA',
+  'OceansideCA.zip': 'Oceanside, CA',
+  'PalmdaleCA.zip': 'Palmdale, CA',
+  'PhelanCA.zip': 'Phelan, CA',
+  'RiversideCA.zip': 'Riverside, CA',
+  'SacramentoCA.zip': 'Sacramento, CA',
+  'SageCA.zip': 'Sage, CA',
+  'San_DiegoCA.zip': 'San Diego, CA',
+  'San_FranciscoCA.zip': 'San Francisco, CA',
+  'San_JoseCA.zip': 'San Jose, CA',
+};
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -60,6 +84,8 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
 
   // ── Upload state ───────────────────────────────────────────────────────────
   PlatformFile? _pickedFile;
+  String? _selectedCityShapefile; // key into _kCaCityShapefiles, if chosen from the catalog
+  bool _loadingCityShapefile = false;
   String? _uploadError;
   String? _fireId;
   double? _aoiAreaKm2;
@@ -132,7 +158,39 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
       allowedExtensions: ['geojson', 'json', 'zip'],
     );
     if (result != null && result.files.isNotEmpty) {
-      setState(() { _pickedFile = result.files.first; _uploadError = null; });
+      setState(() {
+        _pickedFile = result.files.first;
+        _selectedCityShapefile = null; // manual pick overrides any catalog choice
+        _uploadError = null;
+      });
+    }
+  }
+
+  /// Loads a bundled California-city Shapefile from assets and feeds it into
+  /// the same `_pickedFile` slot a manual upload would use, so `_upload()`
+  /// doesn't need to know or care where the bytes came from.
+  Future<void> _selectCityShapefile(String? key) async {
+    if (key == null) {
+      setState(() { _selectedCityShapefile = null; _pickedFile = null; });
+      return;
+    }
+    setState(() { _loadingCityShapefile = true; _selectedCityShapefile = key; _uploadError = null; });
+    try {
+      final data = await rootBundle.load('assets/CA_city_shapefiles/$key');
+      final bytes = data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes);
+      if (!mounted) return;
+      setState(() {
+        _pickedFile = PlatformFile(name: key, size: bytes.length, bytes: bytes);
+        _nameCtrl.text = _kCaCityShapefiles[key] ?? key;
+        _loadingCityShapefile = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _uploadError = 'Failed to load $key: $e';
+        _selectedCityShapefile = null;
+        _loadingCityShapefile = false;
+      });
     }
   }
 
@@ -482,6 +540,17 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
           style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.5)),
       const SizedBox(height: 20),
 
+      _subLabel('Select a California City (optional)'),
+      const SizedBox(height: 8),
+      _citySelector(),
+      const SizedBox(height: 16),
+      const Center(
+        child: Text('OR',
+            style: TextStyle(color: Colors.white70, fontSize: 13, fontWeight: FontWeight.bold,
+                decoration: TextDecoration.underline, letterSpacing: 1.2)),
+      ),
+      const SizedBox(height: 16),
+
       GestureDetector(
         onTap: _pickFile,
         child: Container(
@@ -536,6 +605,36 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
         child: const Text('Upload AOI  →', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)),
       )),
     ]),
+  );
+
+  Widget _citySelector() => DropdownButtonFormField<String>(
+    initialValue: _selectedCityShapefile,
+    isExpanded: true,
+    dropdownColor: const Color(0xFF141820),
+    icon: _loadingCityShapefile
+        ? const SizedBox(width: 14, height: 14,
+            child: CircularProgressIndicator(strokeWidth: 2, color: _kAccent))
+        : const Icon(Icons.arrow_drop_down, color: Colors.white54),
+    hint: const Text('Choose from 15 preloaded city shapefiles...',
+        style: TextStyle(color: Colors.white30, fontSize: 12)),
+    style: const TextStyle(color: Colors.white, fontSize: 12),
+    decoration: InputDecoration(
+      filled: true, fillColor: const Color(0xFF141820),
+      border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: _kAccent.withValues(alpha: 0.25))),
+      enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: const BorderSide(color: Color(0xFF2A2F3A))),
+      focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+          borderSide: BorderSide(color: _kAccent.withValues(alpha: 0.55))),
+      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+    ),
+    items: _kCaCityShapefiles.entries
+        .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value, overflow: TextOverflow.ellipsis)))
+        .toList(),
+    onChanged: _loadingCityShapefile ? null : _selectCityShapefile,
   );
 
   Widget _textField(TextEditingController ctrl, String hint) => TextField(
@@ -789,7 +888,7 @@ class _MhriFusionScreenState extends State<MhriFusionScreen>
           onPressed: () => setState(() {
             _step = _Step.upload; _basins = null; _mhriCells = null; _perimeter = null;
             _selectedBasinIdx = null; _selectedCellIdx = null; _fireId = null;
-            _pickedFile = null; _paramMetadata = {};
+            _pickedFile = null; _selectedCityShapefile = null; _paramMetadata = {};
             _historicalBurnPct = null; _historicalFireMatches = [];
           }),
           child: const Text('← Start a new AOI', style: TextStyle(color: _kAccent, fontSize: 13)),

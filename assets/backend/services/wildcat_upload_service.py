@@ -38,6 +38,9 @@ log = logging.getLogger(__name__)
 _BACKEND_ROOT = Path(__file__).parent.parent
 _WEBAPP_ROOT  = _BACKEND_ROOT.parent
 _WILDCAT_DIR  = Path(os.environ.get("WILDCAT_DATA_DIR", str(_WEBAPP_ROOT / "wildcat")))
+# Dynamic, per-fire output root — see the matching comment in
+# wildcat_generic_service.py for why this is separate from _WILDCAT_DIR.
+_FIRE_DATA_DIR = Path(os.environ.get("FIRE_DATA_DIR", str(_WILDCAT_DIR)))
 
 _ALLOWED_SUFFIXES = {".geojson", ".json", ".zip"}
 
@@ -100,7 +103,7 @@ def upload_custom_perimeter(
         burn_history = _wg.historical_burn_overlap(gdf)
 
         fire_id = _make_fire_id(name, year)
-        inp_dir = _WILDCAT_DIR / fire_id / "inputs"
+        inp_dir = _FIRE_DATA_DIR / fire_id / "inputs"
         inp_dir.mkdir(parents=True, exist_ok=True)
 
         out_shp = inp_dir / f"{fire_id}_perimeter.shp"
@@ -160,7 +163,7 @@ def _make_fire_id(name: str, year: Optional[int]) -> str:
 
     fire_id = base
     n = 2
-    while (_WILDCAT_DIR / fire_id).exists():
+    while (_FIRE_DATA_DIR / fire_id).exists():
         fire_id = f"{base}_{n}"
         n += 1
     return fire_id

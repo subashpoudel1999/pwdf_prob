@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import os
 import shutil
 import tempfile
 import threading
@@ -30,7 +31,15 @@ from typing import Dict, Any, Optional
 log = logging.getLogger(__name__)
 
 _WEBAPP_ROOT  = Path(__file__).parent.parent.parent   # fire_webapp2/
-_WILDCAT_DIR  = _WEBAPP_ROOT / "wildcat"
+# Bundled, read-only: the wildcat package source and static catalog files
+# (fires_perimeters.geojson, fires_catalog.json) that ship inside the image.
+_WILDCAT_DIR  = Path(os.environ.get("WILDCAT_DATA_DIR", str(_WEBAPP_ROOT / "wildcat")))
+# Dynamic, per-fire: uploaded perimeters, downloaded DEM/dNBR, and Wildcat
+# results. Defaults to _WILDCAT_DIR (today's behavior, unchanged for local
+# dev/Render) but on Cloud Run this is pointed at a GCS-backed volume mount
+# instead, since Cloud Run's local filesystem doesn't survive a redeploy or
+# scaling to a second instance — see project memory / gee_service.py note.
+_FIRE_DATA_DIR = Path(os.environ.get("FIRE_DATA_DIR", str(_WILDCAT_DIR)))
 
 _jobs: Dict[str, Dict] = {}
 _active_by_fire: Dict[str, str] = {}   # fire_id -> job_id, while a run is in flight
@@ -44,8 +53,8 @@ def start_analysis(
     force: bool = False,
 ) -> Dict[str, Any]:
     """Start a Wildcat analysis for any fire.  Returns {job_id, cached}."""
-    inp_dir  = _WILDCAT_DIR / fire_id / "inputs"
-    cache    = _WILDCAT_DIR / fire_id / "assessment" / "basins.geojson"
+    inp_dir  = _FIRE_DATA_DIR / fire_id / "inputs"
+    cache    = _FIRE_DATA_DIR / fire_id / "assessment" / "basins.geojson"
 
     if not inp_dir.exists():
         raise FileNotFoundError(
@@ -108,7 +117,7 @@ def get_perimeter(fire_id: str) -> Dict[str, Any]:
     and so never get a "perimeter" key from the MHRI endpoint."""
     import geopandas as gpd
 
-    inp_dir = _WILDCAT_DIR / fire_id / "inputs"
+    inp_dir = _FIRE_DATA_DIR / fire_id / "inputs"
     if not inp_dir.exists():
         raise FileNotFoundError(f"No inputs directory for fire '{fire_id}'.")
     files = _find_inputs(inp_dir)
@@ -124,7 +133,7 @@ def get_perimeter(fire_id: str) -> Dict[str, Any]:
 
 
 def get_results(fire_id: str) -> Dict[str, Any]:
-    path = _WILDCAT_DIR / fire_id / "assessment" / "basins.geojson"
+    path = _FIRE_DATA_DIR / fire_id / "assessment" / "basins.geojson"
     if not path.exists():
         raise FileNotFoundError(
             f"No results for fire '{fire_id}'. Run analysis first."
@@ -161,8 +170,8 @@ def get_all_perimeters_geojson() -> dict:
     catalog = {e["id"]: e for e in get_fire_catalog()}
     features = []
 
-    if _WILDCAT_DIR.exists():
-        for fire_dir in sorted(_WILDCAT_DIR.iterdir()):
+    if _FIRE_DATA_DIR.exists():
+        for fire_dir in sorted(_FIRE_DATA_DIR.iterdir()):
             if not fire_dir.is_dir():
                 continue
             inp = fire_dir / "inputs"
@@ -273,8 +282,8 @@ def get_fire_catalog() -> list:
             # Refresh live fields — rasters and assessment may have appeared since JSON was written
             for entry in catalog:
                 fire_id    = entry["id"]
-                inp        = _WILDCAT_DIR / fire_id / "inputs"
-                assessment = _WILDCAT_DIR / fire_id / "assessment" / "basins.geojson"
+                inp        = _FIRE_DATA_DIR / fire_id / "inputs"
+                assessment = _FIRE_DATA_DIR / fire_id / "assessment" / "basins.geojson"
                 entry["has_results"] = assessment.exists()
                 entry["has_dem"]     = _has_dem(inp)
                 entry["has_dnbr"]    = _has_dnbr(inp)
@@ -287,10 +296,10 @@ def get_fire_catalog() -> list:
     import geopandas as gpd
 
     fires = []
-    if not _WILDCAT_DIR.exists():
+    if not _FIRE_DATA_DIR.exists():
         return fires
 
-    for fire_dir in sorted(_WILDCAT_DIR.iterdir()):
+    for fire_dir in sorted(_FIRE_DATA_DIR.iterdir()):
         if not fire_dir.is_dir():
             continue
         inp = fire_dir / "inputs"
@@ -401,7 +410,7 @@ def _run(
             "status": "completed", "step": 3, "progress": 100,
             "message": "Wildcat analysis complete!",
             "basin_count": _count_basins(
-                _WILDCAT_DIR / fire_id / "assessment" / "basins.geojson"
+                _FIRE_DATA_DIR / fire_id / "assessment" / "basins.geojson"
             ),
         })
 
@@ -456,7 +465,7 @@ def _cache_results(fire_id: str, assessment_tmp: Path):
     Concurrent runs are now prevented by `_active_by_fire`, but this check
     stays as a second line of defense against any other corruption mode."""
     import geopandas as gpd
-    out = _WILDCAT_DIR / fire_id / "assessment"
+    out = _FIRE_DATA_DIR / fire_id / "assessment"
     out.mkdir(parents=True, exist_ok=True)
     for fname in ["basins.geojson", "segments.geojson", "outlets.geojson"]:
         src = assessment_tmp / fname
@@ -486,7 +495,7 @@ def _cache_results(fire_id: str, assessment_tmp: Path):
 
 
 def _clear_assessment(fire_id: str):
-    assess_dir = _WILDCAT_DIR / fire_id / "assessment"
+    assess_dir = _FIRE_DATA_DIR / fire_id / "assessment"
     if assess_dir.exists():
         for p in assess_dir.glob("*.geojson"):
             p.unlink()

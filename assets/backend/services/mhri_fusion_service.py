@@ -46,6 +46,9 @@ log = logging.getLogger(__name__)
 _BACKEND_ROOT = Path(__file__).parent.parent
 _WEBAPP_ROOT  = _BACKEND_ROOT.parent
 _WILDCAT_DIR  = Path(os.environ.get("WILDCAT_DATA_DIR", str(_WEBAPP_ROOT / "wildcat")))
+# Dynamic, per-fire output root — see the matching comment in
+# wildcat_generic_service.py for why this is separate from _WILDCAT_DIR.
+_FIRE_DATA_DIR = Path(os.environ.get("FIRE_DATA_DIR", str(_WILDCAT_DIR)))
 
 ASBPA_DIR = Path(os.environ.get("ASBPA_DATA_DIR", str(_WEBAPP_ROOT / "asbpa_data")))
 _COUNTY_SHP    = ASBPA_DIR / "0. shapefiles" / "ALL_states_merged.shp"
@@ -251,8 +254,8 @@ def compute_mhri_grid(fire_id: str, i15_index: int = 0) -> Dict[str, Any]:
           "cell_count", "mhri_grid": <GeoJSON FeatureCollection, EPSG:4326>,
         }
     """
-    inp_dir = _WILDCAT_DIR / fire_id / "inputs"
-    assess_dir = _WILDCAT_DIR / fire_id / "assessment"
+    inp_dir = _FIRE_DATA_DIR / fire_id / "inputs"
+    assess_dir = _FIRE_DATA_DIR / fire_id / "assessment"
     basins_path = assess_dir / "basins.geojson"
     if not basins_path.exists():
         raise FileNotFoundError(
