@@ -4,13 +4,44 @@ Last updated: 2026-08-13. Point a future Claude Code session at this file to res
 
 ## STATUS: fully deployed and live
 
-- Frontend: **https://subashpoudel1999.github.io/pwdf_prob/** (GitHub Pages,
-  `gh-pages` branch of `subashpoudel1999/pwdf_prob`)
+- Frontend: **https://subashpoudel1999.github.io/pwdf_prob/** (GitHub
+  Pages, source = **GitHub Actions**, not a branch — see next section)
 - Backend: **https://wildcat-mhri-backend-600531524448.us-west1.run.app**
   (Cloud Run, revision `wildcat-mhri-backend-00005-mbk`)
 - CORS locked down to the GitHub Pages origin + localhost dev ports (was
   wide-open `*` before 2026-08-13).
-- All code committed and pushed to `main` (commit `75790ec`).
+- All code committed and pushed to `main` (through commit `38a1526`).
+
+## ⚠️ How the frontend actually deploys — read this before touching it
+
+This repo has **`.github/workflows/deploy-pages.yml`**, which rebuilds and
+redeploys the Flutter web app via `actions/deploy-pages@v4` on **every
+push to `main`**. This is the real, sole mechanism serving
+`subashpoudel1999.github.io/pwdf_prob/` — GitHub Pages is configured with
+source = "GitHub Actions" for this repo, **not** "deploy from a branch".
+
+The `gh-pages` branch still exists but is **vestigial/unused for
+serving** — a leftover from an earlier deploy scheme. Pushing a manually
+built `build/web` there (e.g. via a git worktree) does nothing for the
+live site and will look deceptively like it worked (the branch push
+succeeds, you can even `curl` the branch's raw content) right up until
+the next push to `main` re-triggers the real Actions deploy and silently
+overwrites whatever you thought you'd shipped.
+
+**Bug hit and fixed 2026-08-13:** the workflow used to build with
+`BACKEND_URL: ${{ vars.BACKEND_URL || secrets.BACKEND_URL }}` — a repo
+Actions variable/secret still set to the old, decommissioned Render.com
+URL from the abandoned Render plan. Every push to `main` silently
+redeployed the site pointed at a dead backend, so every "Upload AOI"
+returned Render's plain-text `Not Found`. Fixed by hardcoding the Cloud
+Run URL directly in the workflow's `flutter build web` step — no secret/
+variable involved anymore. **If the Cloud Run service URL ever changes,
+update it in `.github/workflows/deploy-pages.yml`, not in a GitHub
+Settings variable.**
+
+**To deploy a frontend change:** just push to `main`. Don't push to
+`gh-pages` — it won't do anything and will confuse the next person (or
+session) investigating a "why isn't my change live" issue.
 
 ## What this app is
 
@@ -128,14 +159,14 @@ Firestore too — not done.
 
 ## Still open / next steps
 
-All three items below were completed 2026-08-13:
+All items below were completed 2026-08-13:
 
-1. ~~Deploy frontend to GitHub Pages.~~ Done — built with
-   `flutter build web --dart-define=BACKEND_URL=https://wildcat-mhri-backend-600531524448.us-west1.run.app/api/v1 --base-href /pwdf_prob/`
-   and pushed to the `gh-pages` branch via a temporary git worktree (old
-   site content fully replaced). **Note:** run Flutter/gcloud build commands
-   via the PowerShell tool, not Bash — Git Bash's MSYS path conversion
-   mangles leading-slash args like `--base-href /pwdf_prob/`.
+1. ~~Deploy frontend to GitHub Pages.~~ Done — via the `deploy-pages.yml`
+   Actions workflow (see above), triggered by pushing to `main`. **Note:**
+   run any local Flutter/gcloud build commands via the PowerShell tool,
+   not Bash — Git Bash's MSYS path conversion mangles leading-slash args
+   like `--base-href /pwdf_prob/`. (Not an issue for the Actions workflow
+   itself, which runs on Ubuntu.)
 2. ~~Lock down CORS~~ Done — [assets/backend/main.py](assets/backend/main.py)
    now allows only `https://subashpoudel1999.github.io` +
    `localhost:8080`/`localhost:3000` for local dev. Verified via curl
@@ -145,8 +176,13 @@ All three items below were completed 2026-08-13:
    pushed to `origin/main`. (`ERDC_Wildcat_Dashboard_TR_draft.docx` and
    `TR_REVAMP_INSTRUCTIONS.md` were left uncommitted/untracked — unrelated
    report-writing task, not part of this deployment.)
+4. ~~Fix stale Render.com URL baked into the Pages deploy~~ Done — see
+   "How the frontend actually deploys" above. Commit `38a1526`.
 
 ### Possible future work (not blocking, not started)
 - Job-status durability (see "Known remaining limitation" above) if this
   ever needs concurrent multi-user support.
 - Custom domain for GitHub Pages, if desired.
+- Consider deleting the vestigial `gh-pages` branch to remove the
+  confusion trap described above (left alone for now — not deleted, since
+  it's harmless as long as this doc is read first).
