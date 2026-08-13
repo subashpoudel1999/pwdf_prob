@@ -1,6 +1,16 @@
 # Deployment Status — fire_webapp4 (Wildcat × MHRI Fusion)
 
-Last updated: 2026-07-31. Point a future Claude Code session at this file to resume.
+Last updated: 2026-08-13. Point a future Claude Code session at this file to resume.
+
+## STATUS: fully deployed and live
+
+- Frontend: **https://subashpoudel1999.github.io/pwdf_prob/** (GitHub Pages,
+  `gh-pages` branch of `subashpoudel1999/pwdf_prob`)
+- Backend: **https://wildcat-mhri-backend-600531524448.us-west1.run.app**
+  (Cloud Run, revision `wildcat-mhri-backend-00005-mbk`)
+- CORS locked down to the GitHub Pages origin + localhost dev ports (was
+  wide-open `*` before 2026-08-13).
+- All code committed and pushed to `main` (commit `75790ec`).
 
 ## What this app is
 
@@ -118,11 +128,25 @@ Firestore too — not done.
 
 ## Still open / next steps
 
-1. **Deploy frontend to GitHub Pages.** User already has an existing GitHub
-   site; it'll be replaced once this build is confident/ready. Need:
-   `flutter build web --dart-define=BACKEND_URL=https://wildcat-mhri-backend-600531524448.us-west1.run.app/api/v1 --base-href /<repo-name>/`
-   then publish `build/web` (e.g. via a `gh-pages` branch or GitHub Actions).
-2. **Lock down CORS** in [assets/backend/main.py](assets/backend/main.py) —
-   currently `allow_origins=["*"]`, should be restricted to the real GitHub
-   Pages origin once known.
-3. Commit the uncommitted changes listed above, when ready.
+All three items below were completed 2026-08-13:
+
+1. ~~Deploy frontend to GitHub Pages.~~ Done — built with
+   `flutter build web --dart-define=BACKEND_URL=https://wildcat-mhri-backend-600531524448.us-west1.run.app/api/v1 --base-href /pwdf_prob/`
+   and pushed to the `gh-pages` branch via a temporary git worktree (old
+   site content fully replaced). **Note:** run Flutter/gcloud build commands
+   via the PowerShell tool, not Bash — Git Bash's MSYS path conversion
+   mangles leading-slash args like `--base-href /pwdf_prob/`.
+2. ~~Lock down CORS~~ Done — [assets/backend/main.py](assets/backend/main.py)
+   now allows only `https://subashpoudel1999.github.io` +
+   `localhost:8080`/`localhost:3000` for local dev. Verified via curl
+   preflight (allowed origin gets `access-control-allow-origin` header,
+   other origins don't).
+3. ~~Commit the uncommitted changes~~ Done — commit `75790ec` on `main`,
+   pushed to `origin/main`. (`ERDC_Wildcat_Dashboard_TR_draft.docx` and
+   `TR_REVAMP_INSTRUCTIONS.md` were left uncommitted/untracked — unrelated
+   report-writing task, not part of this deployment.)
+
+### Possible future work (not blocking, not started)
+- Job-status durability (see "Known remaining limitation" above) if this
+  ever needs concurrent multi-user support.
+- Custom domain for GitHub Pages, if desired.
