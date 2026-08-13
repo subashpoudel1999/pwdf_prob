@@ -1,11 +1,11 @@
 {
-    "name": "fire_webapp",
-    "short_name": "fire_webapp",
+    "name": "Wildcat x MHRI Fusion",
+    "short_name": "MHRI Fusion",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#080A0E",
+    "theme_color": "#26C6DA",
+    "description": "Post-wildfire debris-flow hazard fused into the ASBPA Multi-Hazard Resilience Index.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
