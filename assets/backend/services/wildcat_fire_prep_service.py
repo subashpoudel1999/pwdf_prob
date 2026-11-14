@@ -84,10 +84,21 @@ def _scan_tier1_fires() -> List[Dict]:
             lat, lon, area = None, None, None
 
         slug = fire_dir.name
+        # Uploaded AOIs record the user-entered fire_date in meta.json
+        # (wildcat_upload_service). Without it, _run_prep falls back to
+        # {year}-07-01, which puts the dNBR windows before late-season fires.
+        meta = {}
+        meta_path = inp / "meta.json"
+        if meta_path.exists():
+            try:
+                meta = json.loads(meta_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                meta = {}
         fires.append({
             "id":             slug,
             "name":           _slug_to_display(slug),
             "year":           _guess_year_from_slug(slug),
+            "fire_date":      str(meta.get("fire_date") or ""),
             "location":       _guess_location(lat),
             "lat":            lat,
             "lon":            lon,

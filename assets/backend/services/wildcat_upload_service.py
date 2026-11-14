@@ -32,6 +32,7 @@ import geopandas as gpd
 
 import services.wildcat_generic_service as _wg
 import services.mhri_fusion_service as _mhri
+import services.wildcat_fire_prep_service as _prep
 
 log = logging.getLogger(__name__)
 
@@ -64,6 +65,22 @@ def upload_custom_perimeter(
     "in_mhri_coverage"} for the new catalog entry.
     Raises ValueError on bad input (caller should surface this as HTTP 400).
     """
+    # fire_date drives the pre/post-fire dNBR windows in data prep, so reject
+    # an unparseable one here rather than failing later in Prepare.
+    try:
+        parsed_date = _prep._parse_fire_date(fire_date)
+    except ValueError:
+        raise ValueError(
+            f"Invalid fire date '{fire_date}'. Use YYYY-MM-DD, e.g. 2018-11-08."
+        )
+    # The frontend pre-fills <current year>-07-01, so a user who changes only
+    # the Year field would otherwise get the wrong year's Landsat scenes.
+    if parsed_date.year != int(year):
+        raise ValueError(
+            f"Fire date {fire_date} is not in the fire year {year}. "
+            "Set the fire date to the actual ignition date."
+        )
+
     suffix = Path(filename).suffix.lower()
     if suffix not in _ALLOWED_SUFFIXES:
         raise ValueError(
